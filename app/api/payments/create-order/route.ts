@@ -1,44 +1,55 @@
 import { NextResponse } from "next/server";
-import Razorpay from "razorpay";
+import { Cashfree } from "cashfree-pg";
+import { supabaseServer } from "@/lib/supabaseServer";
+
+// Initialize Cashfree
+Cashfree.XClientId = process.env.CASHFREE_APP_ID!;
+Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY!;
+Cashfree.XEnvironment = Cashfree.Environment.SANDBOX; // SWITCH TO PRODUCTION WHEN LIVE
 
 export async function POST(req: Request) {
   try {
-    const { amount, gigId, posterId } = await req.json();
+    const { amount, gigId, posterId, posterPhone, posterEmail } = await req.json();
 
-    if (!amount || !gigId || !posterId) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    // Security: Validate the user via Supabase Auth
+    const supabase = await supabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user || user.id !== posterId) {
+      return NextResponse.json({ error: "Unauthorized transaction" }, { status: 401 });
     }
 
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID!,
-      key_secret: process.env.RAZORPAY_KEY_SECRET!,
-    });
+    if (!amount || !gigId) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
 
-    const orderAmount = Number(amount) * 100;
+    // Unique Order ID
+    const orderId = `gig_${gigId}_${Date.now()}`;
 
-    const order = await razorpay.orders.create({
-      amount: orderAmount,
-      currency: "INR",
-      receipt: `gig_${gigId}_${Date.now()}`,
-      notes: {
-        gigId,
-        posterId,
+    const request = {
+      order_amount: Number(amount),
+      order_currency: "INR",
+      order_id: orderId,
+      customer_details: {
+        customer_id: posterId,
+        customer_phone: posterPhone || "9999999999", // Cashfree requires valid phone format
+        customer_email: posterEmail || user.email || "user@example.com",
       },
-    });
+      order_meta: {
+        // The return URL the user hits after payment
+        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/gig/${gigId}?payment_status=verifying&order_id={order_id}`,
+        notify_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook`, 
+      },
+      order_note: `Escrow for Gig ${gigId}`,
+    };
 
-    return NextResponse.json({
-      success: true,
-      orderId: order.id,
-      amount: orderAmount,
-      currency: "INR",
-    });
-  } catch (err: any) {
-    console.error("Razorpay Order Error:", err);
+    const response = await Cashfree.PGCreateOrder("2023-08-01", request);
+
+    return NextResponse.json(response.data);
+  } catch (error: any) {
+    console.error("Cashfree Create Order Error:", error.response?.data?.message || error.message);
     return NextResponse.json(
-      { error: err.message || "Something went wrong" },
+      { error: error.response?.data?.message || "Payment initialization failed" },
       { status: 500 }
     );
   }

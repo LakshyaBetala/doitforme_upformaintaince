@@ -38,7 +38,7 @@ export default function ApplicantsPage() {
   useEffect(() => {
     load({
       mode: "sandbox" // Change to "production" when live
-    }).then((sdk) => {
+    }).then((sdk: any) => {
       setCashfree(sdk);
     });
   }, []);
