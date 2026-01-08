@@ -3,18 +3,21 @@ import { Cashfree } from "cashfree-pg";
 import { supabaseServer } from "@/lib/supabaseServer";
 
 // Initialize Cashfree
+// @ts-ignore
 Cashfree.XClientId = process.env.CASHFREE_APP_ID!;
+// @ts-ignore
 Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY!;
-Cashfree.XEnvironment = Cashfree.Environment.SANDBOX; // SWITCH TO PRODUCTION WHEN LIVE
+// @ts-ignore
+Cashfree.XEnvironment = Cashfree.Environment.SANDBOX; // Switch to PRODUCTION when live
 
 export async function POST(req: Request) {
   try {
     const { amount, gigId, posterId, posterPhone, posterEmail } = await req.json();
 
-    // Security: Validate the user via Supabase Auth
     const supabase = await supabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
 
+    // Security check
     if (!user || user.id !== posterId) {
       return NextResponse.json({ error: "Unauthorized transaction" }, { status: 401 });
     }
@@ -23,7 +26,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Unique Order ID
+    // Generate Unique Order ID
     const orderId = `gig_${gigId}_${Date.now()}`;
 
     const request = {
@@ -32,17 +35,17 @@ export async function POST(req: Request) {
       order_id: orderId,
       customer_details: {
         customer_id: posterId,
-        customer_phone: posterPhone || "9999999999", // Cashfree requires valid phone format
+        customer_phone: posterPhone || "9999999999",
         customer_email: posterEmail || user.email || "user@example.com",
       },
       order_meta: {
-        // The return URL the user hits after payment
-        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/gig/${gigId}?payment_status=verifying&order_id={order_id}`,
-        notify_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook`, 
+        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/gig/${gigId}?payment_status=verifying&order_id={order_id}`,
+        notify_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook`,
       },
       order_note: `Escrow for Gig ${gigId}`,
     };
 
+    // @ts-ignore
     const response = await Cashfree.PGCreateOrder("2023-08-01", request);
 
     return NextResponse.json(response.data);
