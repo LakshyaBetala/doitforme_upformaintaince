@@ -51,6 +51,8 @@ export default function Dashboard() {
             ...dbUser,
           }
         };
+
+        
         
         setUser(mergedUser);
 
