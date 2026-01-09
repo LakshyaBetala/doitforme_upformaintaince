@@ -113,4 +113,4 @@ export async function POST(req: Request) {
     console.error("Verification Error:", error);
     return NextResponse.json({ error: error.message || "Verification failed" }, { status: 500 });
   }
-}
+}   
