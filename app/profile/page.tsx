@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import Image from "next/image";
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton"; // <--- Imported Logout Button
 import { 
   User, 
   Mail, 
@@ -20,7 +21,9 @@ import {
   CheckCircle2, 
   Copy, 
   ExternalLink, 
-  Clock 
+  Clock,
+  Phone,          // <--- Added Icon
+  GraduationCap   // <--- Added Icon
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -87,8 +90,6 @@ export default function ProfilePage() {
           .single();
 
         // 4. Fetch Stats & Calculate Earnings
-        // FIX: We now fetch the 'price' to calculate earnings manually
-        // FIX: We check for 'COMPLETED' (uppercase) which matches the API
         const { data: completedGigs } = await supabase
           .from("gigs")
           .select("price")
@@ -102,7 +103,6 @@ export default function ProfilePage() {
         if (!walletData) {
             walletData = { balance: 0, total_earned: totalEarned }; 
         } else {
-            // Fallback: If DB column is missing/empty, use calculated value
             walletData.total_earned = walletData.total_earned || totalEarned;
         }
 
@@ -194,15 +194,23 @@ export default function ProfilePage() {
                     <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight capitalize">
                       {displayName}
                     </h1>
-                    <button className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/30 hover:text-white">
-                      <Edit3 className="w-4 h-4" />
-                    </button>
                   </div>
 
+                  {/* UPDATED: Profile Details Chips */}
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-white/60 text-sm font-medium">
                     <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
                       <Mail className="w-4 h-4 text-brand-blue" /> {profile.email}
                     </span>
+                    {profile.phone && (
+                        <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                            <Phone className="w-4 h-4 text-green-400" /> {profile.phone}
+                        </span>
+                    )}
+                    {profile.college && (
+                        <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                            <GraduationCap className="w-4 h-4 text-yellow-400" /> {profile.college}
+                        </span>
+                    )}
                     <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
                       <Calendar className="w-4 h-4 text-brand-pink" /> Joined {joinDate}
                     </span>
@@ -353,6 +361,14 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+
+        {/* --- LOGOUT BUTTON SECTION --- */}
+        <div className="flex justify-center pt-8">
+            <div className="w-full md:w-1/3">
+                <LogoutButton />
+            </div>
+        </div>
+
       </div>
     </main>
   );
