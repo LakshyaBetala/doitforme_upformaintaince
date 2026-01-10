@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import Image from "next/image";
 import Link from "next/link";
-import LogoutButton from "@/components/LogoutButton"; // <--- Imported Logout Button
+import LogoutButton from "@/components/LogoutButton";
 import { 
   User, 
   Mail, 
@@ -17,13 +17,10 @@ import {
   Loader2, 
   Wallet, 
   Calendar, 
-  Edit3, 
   CheckCircle2, 
-  Copy, 
-  ExternalLink, 
-  Clock,
-  Phone,          // <--- Added Icon
-  GraduationCap   // <--- Added Icon
+  Phone, 
+  GraduationCap,
+  ArrowLeft 
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -139,7 +136,6 @@ export default function ProfilePage() {
   if (!profile) return null;
 
   const joinDate = new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const walletAddress = profile.id ? `0x${profile.id.replace(/-/g, '').slice(0, 16)}...` : "0x0000...";
   const avatarLetter = profile.email ? profile.email[0].toUpperCase() : "U";
   const displayName = profile.name || profile.email.split("@")[0];
 
@@ -152,6 +148,11 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-5xl mx-auto space-y-10 relative z-10">
+
+        {/* --- BACK BUTTON --- */}
+        <Link href="/dashboard" className="inline-flex items-center gap-2 text-white/50 hover:text-white transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+        </Link>
 
         {/* --- HEADER --- */}
         <div className="relative group">
@@ -196,7 +197,7 @@ export default function ProfilePage() {
                     </h1>
                   </div>
 
-                  {/* UPDATED: Profile Details Chips */}
+                  {/* Profile Details Chips */}
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-white/60 text-sm font-medium">
                     <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
                       <Mail className="w-4 h-4 text-brand-blue" /> {profile.email}
@@ -214,22 +215,6 @@ export default function ProfilePage() {
                     <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
                       <Calendar className="w-4 h-4 text-brand-pink" /> Joined {joinDate}
                     </span>
-                  </div>
-                </div>
-
-                {/* Wallet Chip */}
-                <div className="inline-flex items-center gap-4 p-3 pr-6 bg-black/40 rounded-xl border border-white/10 backdrop-blur-md group/wallet cursor-pointer hover:border-brand-purple/50 transition-colors">
-                  <div className="p-2.5 bg-brand-purple/20 rounded-lg text-brand-purple">
-                    <Wallet className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest mb-0.5">Wallet ID</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-mono text-white/90 tracking-wide group-hover/wallet:text-brand-purple transition-colors">
-                        {walletAddress}
-                      </p>
-                      <Copy className="w-3 h-3 text-white/30 group-hover/wallet:text-white transition-colors" />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -315,16 +300,6 @@ export default function ProfilePage() {
                   <span className="text-white/60 font-medium">Total Earned</span>
                 </div>
                 <span className="text-2xl font-bold text-white">₹{wallet?.total_earned || 0}</span>
-              </div>
-
-              <div className="flex justify-between items-center p-5 bg-[#0B0B11] border border-white/5 rounded-2xl hover:border-brand-pink/30 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-brand-pink/10 flex items-center justify-center border border-brand-pink/20">
-                    <ShieldCheck className="w-5 h-5 text-brand-pink" />
-                  </div>
-                  <span className="text-white/60 font-medium">Escrow Cleared</span>
-                </div>
-                <span className="text-2xl font-bold text-white">₹{stats.earnings}</span>
               </div>
             </div>
           </div>

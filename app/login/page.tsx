@@ -4,8 +4,9 @@ import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react"; // Icons for password visibility
 
-// --- EXPANDED COLLEGES LIST ---
+// --- COLLEGES LIST ---
 const COLLEGES = [
   "SRM (Vadapalani)",
   "SRM (Ramapuram)",
@@ -59,6 +60,7 @@ export default function AuthPage() {
   // Form State
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // Toggle state
   
   // Fields
   const [email, setEmail] = useState("");
@@ -66,7 +68,20 @@ export default function AuthPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [college, setCollege] = useState(COLLEGES[0]);
-  const [customCollege, setCustomCollege] = useState(""); // State for "Other" input
+  const [customCollege, setCustomCollege] = useState(""); 
+
+  // --- HELPER: SYNC USER TO DB ---
+  const syncUser = async (id: string, email: string) => {
+    try {
+      await fetch("/api/auth/create-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, email }),
+      });
+    } catch (e) {
+      console.error("Sync failed", e);
+    }
+  };
 
   // --- SUBMIT HANDLER ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,12 +129,7 @@ export default function AuthPage() {
       error = res.error;
       
       if (!error) {
-        // Sync API call for consistency
-        await fetch("/api/auth/create-user", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: res.data.user?.id, email }),
-        });
+        await syncUser(res.data.user?.id!, email);
         router.push("/dashboard");
         return;
       }
@@ -130,10 +140,8 @@ export default function AuthPage() {
   };
 
   const handleSignup = async () => {
-    // Determine final college name
     const finalCollege = college === "Other" ? customCollege.trim() : college;
 
-    // Validation
     if (!email || !password || !name || !phone) {
       setLoading(false);
       return setMessage("Please fill in all fields.");
@@ -144,16 +152,16 @@ export default function AuthPage() {
       return setMessage("Please enter your university name.");
     }
 
-    // 1. REGISTER WITH SUPABASE
+    // 1. REGISTER USER
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        // Save metadata for verification step
+        // We save profile data here, but we DO NOT create the public profile yet
         data: {
           full_name: name,
           phone: phone,
-          college: finalCollege, // Send the correct college name
+          college: finalCollege,
         },
       },
     });
@@ -163,9 +171,21 @@ export default function AuthPage() {
       return setMessage(error.message);
     }
 
-    // 2. REDIRECT TO VERIFY
-    setLoading(false);
-    router.push(`/verify?email=${encodeURIComponent(email)}&mode=signup`);
+    if (data.user) {
+      // 2. FORCE OTP SENDING
+      // signUp() often sends a "Confirm Link" by default. 
+      // We explicitly call signInWithOtp to send a "6-digit Code" immediately.
+      await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
+      });
+
+      // 3. FORCE VERIFY REDIRECT
+      // Even if data.session exists, we IGNORE it and send them to verify.
+      // We do NOT call syncUser() here. The profile is created only after OTP is entered.
+      setLoading(false);
+      router.push(`/verify?email=${encodeURIComponent(email)}&mode=signup`);
+    }
   };
 
   // --- STYLES ---
@@ -193,6 +213,7 @@ export default function AuthPage() {
 
         <form onSubmit={handleSubmit}>
           
+          {/* LOGIN VIEW */}
           {view === "LOGIN" && (
             <div className="space-y-4">
                <div className="flex bg-white/5 p-1 rounded-xl mb-6 border border-white/5">
@@ -225,17 +246,27 @@ export default function AuthPage() {
               />
 
               {loginMethod === "PASSWORD" && (
-                <input
-                  type="password"
-                  placeholder="Enter password"
-                  className={inputStyle}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter password"
+                    className={inputStyle}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               )}
             </div>
           )}
 
+          {/* SIGNUP VIEW */}
           {view === "SIGNUP" && (
             <div className="space-y-4">
               <input
@@ -262,7 +293,6 @@ export default function AuthPage() {
                 onChange={(e) => setPhone(e.target.value)}
               />
 
-              {/* University Selection */}
               <div className="relative">
                 <label className="block text-xs font-bold text-white/40 mb-1.5 ml-1 uppercase tracking-wider">Select University</label>
                 <select
@@ -281,7 +311,6 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              {/* Custom University Input (Conditional) */}
               {college === "Other" && (
                 <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                   <input
@@ -295,13 +324,22 @@ export default function AuthPage() {
                 </div>
               )}
 
-              <input
-                type="password"
-                placeholder="Create Password"
-                className={inputStyle}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create Password"
+                  className={inputStyle}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           )}
 
