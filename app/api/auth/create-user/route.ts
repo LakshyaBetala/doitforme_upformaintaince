@@ -4,46 +4,48 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    // Added: name, phone, college to destructuring
     const { id, email, name, phone, college } = body;
-
-    console.log("API: Syncing user:", email);
 
     if (!id || !email) {
       return NextResponse.json({ error: "Missing ID or Email" }, { status: 400 });
     }
 
-    // Initialize Admin Client (Bypasses RLS)
+    // Initialize Admin Client (Bypasses RLS to ensure we can read/write everything)
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // --- STEP 1: HANDLE STALE DATA (GHOST USERS) ---
+    // --- 1. FETCH EXISTING USER DATA ---
     const { data: existingUser } = await supabase
       .from("users")
-      .select("id")
-      .eq("email", email)
+      .select("*")
+      .eq("id", id)
       .single();
 
-    if (existingUser && existingUser.id !== id) {
-      console.log(`API: Cleaning up stale user (Old ID: ${existingUser.id})`);
-      await supabase.from("users").delete().eq("id", existingUser.id);
-      await supabase.from("wallets").delete().eq("user_id", existingUser.id);
-    }
+    // --- 2. PREPARE SMART DATA (The Fix) ---
+    // If user exists, keep their old data. Only overwrite if new data is sent (truthy).
+    // If user is new, use the defaults.
+    
+    const finalName = name || existingUser?.name || email.split("@")[0];
+    const finalPhone = phone || existingUser?.phone || null;
+    const finalCollege = college || existingUser?.college || null;
+    
+    // Preserve verification status
+    const finalKyc = existingUser?.kyc_verified || false;
 
-    // --- STEP 2: UPSERT NEW USER DATA ---
+    // --- 3. UPSERT USER ---
     const { error: userError } = await supabase
       .from("users")
       .upsert({ 
         id: id, 
         email: email,
-        // Use provided name or fallback to email prefix
-        name: name || email.split("@")[0],
-        phone: phone || null,
-        college: college || null, // <--- SAVING COLLEGE HERE
-        kyc_verified: false 
+        name: finalName,
+        phone: finalPhone,
+        college: finalCollege,
+        kyc_verified: finalKyc,
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: userError.message }, { status: 500 });
     }
 
-    // --- STEP 3: ENSURE WALLET EXISTS ---
+    // --- 4. ENSURE WALLET EXISTS ---
     const { error: walletError } = await supabase
       .from("wallets")
       .upsert(

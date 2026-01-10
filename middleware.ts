@@ -1,12 +1,12 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
-  });
+  })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,57 +14,60 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
           response = NextResponse.next({
             request: {
               headers: request.headers,
             },
-          });
+          })
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
-          );
+          )
         },
       },
     }
-  );
+  )
 
-  // 1. Get User Session
+  // Get User
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
-  const url = request.nextUrl.clone();
-  
-  // --- PROTECTION RULES ---
+  // 1. DEFINE PROTECTED ROUTES
+  // These routes require the user to be logged in
+  const protectedRoutes = [
+    '/dashboard', 
+    '/profile', 
+    '/post', 
+    '/feed', 
+    '/gig', 
+    '/verify-id' // KYC page should be protected
+  ]
 
-  // 2. Protect Dashboard & Private Routes
-  // If user is NOT logged in and tries to access dashboard, gigs, or post
-  const protectedPaths = ["/dashboard", "/post", "/gig/create", "/verify"];
-  const isProtected = protectedPaths.some((path) => url.pathname.startsWith(path));
+  // Check if current path is protected
+  const isProtected = protectedRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
 
-  if (isProtected && !user) {
-    url.pathname = "/login";
-    // Redirect them to login, but remember where they wanted to go
-    url.searchParams.set("next", request.nextUrl.pathname); 
-    return NextResponse.redirect(url);
+  // 2. REDIRECT LOGIC
+  // If user is NOT logged in and tries to access a protected route -> Redirect to Login
+  if (!user && isProtected) {
+    const loginUrl = new URL('/login', request.url)
+    // Optional: Save where they were trying to go to redirect back after login
+    loginUrl.searchParams.set('redirect_to', request.nextUrl.pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
-  // 3. Prevent Logged-in Users from accessing Auth pages (Login/Register)
-  const authPaths = ["/login", "/register"];
-  const isAuthPage = authPaths.some((path) => url.pathname.startsWith(path));
-
-  if (isAuthPage && user) {
-    url.pathname = "/dashboard"; // Kick them to dashboard if already logged in
-    return NextResponse.redirect(url);
+  // 3. OPTIONAL: PREVENT LOGGED-IN USERS FROM SEEING LOGIN PAGE
+  // If user IS logged in and tries to visit /login or /verify (except for signup flow), send to dashboard
+  if (user && request.nextUrl.pathname === '/login') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // 4. Update Session (Important for Server Components)
-  return response;
+  return response
 }
 
 export const config = {
@@ -74,9 +77,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - api (API routes - handled separately or by RLS)
-     * - public (public assets)
+     * - api/ (API routes)
+     * - public images (svg, png, etc.)
      */
-    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-};
+}
