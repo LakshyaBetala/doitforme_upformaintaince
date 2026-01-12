@@ -8,7 +8,9 @@ const PgCashfree = Cashfree as any;
 
 PgCashfree.XClientId = process.env.CASHFREE_APP_ID;
 PgCashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY;
-PgCashfree.XEnvironment = PgCashfree.Environment.SANDBOX; 
+
+// FIX: Use the string "SANDBOX" directly if the Enum is undefined
+PgCashfree.XEnvironment = "SANDBOX"; 
 
 export async function POST(req: Request) {
   const cookieStore = await cookies()
