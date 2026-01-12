@@ -8,26 +8,44 @@ module.exports = {
   theme: {
     extend: {
       /* -----------------------------------------
-         BRAND COLORS
+         FONTS
+      ----------------------------------------- */
+      fontFamily: {
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+      },
+
+      /* -----------------------------------------
+         SWISS MINIMALIST PALETTE
       ----------------------------------------- */
       colors: {
+        // Core Theme Colors (Mapped to globals.css variables)
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+
+        // UI Components
+        card: {
+          DEFAULT: "var(--card)",
+          border: "var(--card-border)",
+        },
+
+        // Brand Accents
         brand: {
-          purple: "#8825F5",
-          pink: "#D31CE7",
-          blue: "#0097FF",
-          dark: "#0B0B11",   // Main background
-          darker: "#06060A", // Footer background
+          purple: "var(--brand-purple)", // #8825F5
+          blue: "var(--brand-blue)",   // #0097FF
+          pink: "#D31CE7",             // Kept for legacy support
+          dark: "#0B0B11",
+          darker: "#06060A",
           glass: "rgba(255,255,255,0.05)",
         },
       },
 
       /* -----------------------------------------
-         ANIMATIONS
+         ANIMATIONS (PRESERVED & REFINED)
       ----------------------------------------- */
       animation: {
         blob: "blob 10s infinite",
         float: "float 6s ease-in-out infinite",
-        marquee: "marquee 25s linear infinite", // <--- CRITICAL FOR TICKER
+        marquee: "marquee 30s linear infinite", // Adjusted speed for elegance
       },
 
       keyframes: {
@@ -39,7 +57,7 @@ module.exports = {
         },
         float: {
           "0%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-18px)" },
+          "50%": { transform: "translateY(-12px)" }, // Reduced movement for minimalism
           "100%": { transform: "translateY(0)" },
         },
         marquee: {
@@ -54,6 +72,7 @@ module.exports = {
       boxShadow: {
         neon: "0 0 10px rgba(136,37,245, 0.5), 0 0 20px rgba(0,151,255, 0.3)",
         glass: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+        subtle: "0 1px 2px 0 rgba(0, 0, 0, 0.05)", // New minimalist shadow
       },
     },
   },
