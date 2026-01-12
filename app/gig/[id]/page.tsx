@@ -261,7 +261,7 @@ export default function GigDetailPage() {
       const json = await res.json();
 
       if (res.ok && json.success) {
-        alert("Gig completed successfully! Funds released.");
+        alert("Gig completed successfully! Funds marked for release.");
         window.location.reload();
       } else {
         throw new Error(json.error || "Failed to complete gig");
@@ -298,7 +298,7 @@ export default function GigDetailPage() {
     }
   };
 
-  // 5. NEW: Handle Dispute Logic
+  // 5. Handle Dispute Logic
   const handleDispute = async () => {
     const reason = prompt("Please explain why you are rejecting this work (min 50 chars). This will freeze funds for Admin review.");
     
@@ -394,7 +394,8 @@ export default function GigDetailPage() {
 
             <h2 className="text-2xl font-bold text-white mb-2 text-center">Rate Experience</h2>
             <p className="text-white/50 text-sm mb-8 text-center">
-              Releasing funds confirms you are satisfied with the work. This cannot be undone.
+              Releasing funds confirms you are satisfied. <br/>
+              <span className="text-brand-purple">Note: Worker will receive funds in 24-48 hours.</span>
             </p>
             
             <div className="flex justify-center gap-3 mb-8">
@@ -468,6 +469,7 @@ export default function GigDetailPage() {
           </div>
         )}
         
+        {/* --- UPDATED COMPLETE MESSAGE --- */}
         {gig.status === 'COMPLETED' && (
           <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 md:p-6 flex items-center gap-4 text-green-400">
              <div className="p-2 bg-green-500/20 rounded-full shrink-0">
@@ -475,7 +477,15 @@ export default function GigDetailPage() {
              </div>
              <div>
                <h4 className="font-bold text-lg">Gig Completed</h4>
-               <p className="text-sm opacity-80">This transaction has been finalized and paid out.</p>
+               <p className="text-sm opacity-80">
+                   This transaction has been finalized.
+                   {/* SHOW FOR WORKERS ONLY */}
+                   {isWorker && (
+                       <span className="block mt-1 font-bold text-green-300">
+                           Note: Payment will reflect in your UPI account within 24-48 hours due to banking settlement times.
+                       </span>
+                   )}
+               </p>
              </div>
           </div>
         )}
