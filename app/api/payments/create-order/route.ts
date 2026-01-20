@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { Cashfree } from "cashfree-pg";
 import { supabaseServer } from "@/lib/supabaseServer";
 
-// Initialize Cashfree
 // @ts-ignore
 Cashfree.XClientId = process.env.CASHFREE_APP_ID!;
 // @ts-ignore
@@ -12,37 +11,44 @@ Cashfree.XEnvironment = Cashfree.Environment.SANDBOX; // Switch to PRODUCTION wh
 
 export async function POST(req: Request) {
   try {
-    const { amount, gigId, posterId, posterPhone, posterEmail } = await req.json();
+    const { gigId, posterId, posterPhone, posterEmail } = await req.json();
 
     const supabase = await supabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Security check
-    if (!user || user.id !== posterId) {
-      return NextResponse.json({ error: "Unauthorized transaction" }, { status: 401 });
-    }
+    // 1. Fetch the REAL price from DB (Security: Never trust the client side)
+    const { data: gig, error } = await supabase
+      .from("gigs")
+      .select("price, title")
+      .eq("id", gigId)
+      .single();
 
-    if (!amount || !gigId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
+    if (error || !gig) return NextResponse.json({ error: "Gig not found" }, { status: 404 });
 
-    // Generate Unique Order ID
+    // 2. Calculate Surcharge (The 2% Gateway Fee)
+    // We add this to the total so the Poster pays it, not you.
+    const basePrice = Number(gig.price);
+    const surcharge = Math.ceil(basePrice * 0.02); // 2% 
+    const totalAmountToCharge = basePrice + surcharge;
+
+    // Generate Order ID
     const orderId = `gig_${gigId}_${Date.now()}`;
 
     const request = {
-      order_amount: Number(amount),
+      order_amount: totalAmountToCharge, // <--- We send the Higher Amount here
       order_currency: "INR",
       order_id: orderId,
       customer_details: {
         customer_id: posterId,
         customer_phone: posterPhone || "9999999999",
-        customer_email: posterEmail || user.email || "user@example.com",
+        customer_email: posterEmail || user?.email || "user@example.com",
       },
       order_meta: {
-        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/gig/${gigId}?payment_status=verifying&order_id={order_id}`,
+        // Pass gig_id in return_url so we can read it in the Verify step
+        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/verify-payment?order_id={order_id}&gig_id=${gigId}`, 
         notify_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook`,
       },
-      order_note: `Escrow for Gig ${gigId}`,
+      order_note: `Gig: ${gig.title} (Incl. Gateway Fee)`,
     };
 
     // @ts-ignore
