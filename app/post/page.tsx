@@ -193,6 +193,17 @@ export default function PostGigPage() {
 
       <div className="w-full max-w-4xl relative z-10">
         
+        {/* --- BACK BUTTON --- */}
+        <button
+          onClick={() => router.back()}
+          className="mb-8 flex items-center gap-2 text-white/60 hover:text-white transition-colors group"
+        >
+          <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          <span className="text-sm font-medium">Back</span>
+        </button>
+
         {/* --- PAGE HEADER --- */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center p-4 bg-white/5 rounded-3xl mb-6 border border-white/10 shadow-[0_0_40px_rgba(136,37,245,0.15)] backdrop-blur-md">

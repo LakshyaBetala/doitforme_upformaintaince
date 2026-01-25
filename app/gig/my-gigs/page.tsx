@@ -163,7 +163,7 @@ export default function MyGigsPage() {
               If you just recreated your account, your old gigs might be orphaned.
             </p>
             <Link 
-              href="/gig/create" 
+              href="/post" 
               className="px-8 py-4 bg-brand-purple text-white font-bold rounded-xl hover:bg-brand-purple/80 transition-colors shadow-lg shadow-brand-purple/20"
             >
               Post a New Request
