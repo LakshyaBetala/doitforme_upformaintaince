@@ -58,7 +58,7 @@ export default function ChatRoomPage() {
 
         const isParticipant = gig.poster_id === currentUser.id || gig.assigned_worker_id === currentUser.id;
         
-        // FIX: Ensure chat is only open if assigned or completed
+        // FIX: Ensure chat is only open if assigned, delivered, completed, or disputed
         if (!isParticipant) {
           setError("Unauthorized: You are not part of this project.");
           setLoading(false);

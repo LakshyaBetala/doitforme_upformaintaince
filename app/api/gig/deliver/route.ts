@@ -52,10 +52,11 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized: You are not the assigned worker." }, { status: 403 });
     }
 
-    // Logic Check: Is the gig active? (Allow 'assigned' or 'open' if manual assignment happened)
+    // Logic Check: Is the gig active?
+    // We allow 'assigned' (first delivery) or 'delivered' (updating submission)
     const currentStatus = gig.status.toLowerCase();
-    if (currentStatus !== 'assigned' && currentStatus !== 'open') {
-         return NextResponse.json({ error: `Gig is not active (Status: ${gig.status})` }, { status: 400 });
+    if (currentStatus !== 'assigned' && currentStatus !== 'delivered') {
+         return NextResponse.json({ error: `Gig is not in progress (Status: ${gig.status})` }, { status: 400 });
     }
 
     // 5. Calculate 24 Hour Auto-Release Time
@@ -65,11 +66,10 @@ export async function POST(req: Request) {
     const { error: updateError } = await supabaseAdmin
       .from("gigs")
       .update({ 
-        status: "DELIVERED",
+        status: "delivered",
         delivery_link: deliveryLink,
         delivered_at: new Date().toISOString(),
-        auto_release_at: autoReleaseTime,
-        // We don't change payment_status here; it stays 'HELD' or 'ESCROW_FUNDED' until completion.
+        auto_release_at: autoReleaseTime
       })
       .eq("id", gigId);
 
