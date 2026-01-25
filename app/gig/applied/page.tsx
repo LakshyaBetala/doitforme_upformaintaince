@@ -12,8 +12,10 @@ import {
   Loader2,
   Briefcase,
   IndianRupee,
-  ArrowUpRight
+  ArrowUpRight,
+  Hourglass
 } from "lucide-react";
+import { timeAgo } from "@/lib/utils";
 
 export default function AppliedGigsPage() {
   const supabase = supabaseBrowser();
@@ -26,31 +28,27 @@ export default function AppliedGigsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 1. Fetch Applications for this user
+        // 1. Fetch Applications + Linked Gig Data using Supabase Joins
         const { data: apps, error: appError } = await supabase
           .from("applications")
-          .select("*")
+          .select(`
+            *,
+            gigs (
+                id,
+                title,
+                price,
+                location,
+                status,
+                created_at
+            )
+          `)
           .eq("worker_id", user.id)
           .order("created_at", { ascending: false });
 
         if (appError) throw appError;
 
-        if (apps && apps.length > 0) {
-          // 2. Manual Join: Fetch Gig Details for these applications
-          const gigIds = apps.map((app) => app.gig_id);
-          const { data: gigs } = await supabase
-            .from("gigs")
-            .select("id, title, price, status")
-            .in("id", gigIds);
+        setApplications(apps || []);
 
-          // 3. Merge Data
-          const merged = apps.map((app) => {
-            const gig = gigs?.find((g) => g.id === app.gig_id);
-            return { ...app, gig };
-          });
-          
-          setApplications(merged);
-        }
       } catch (err) {
         console.error("Error fetching applications:", err);
       } finally {
@@ -67,7 +65,7 @@ export default function AppliedGigsPage() {
       case "accepted":
         return (
           <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold uppercase tracking-wider">
-            <CheckCircle2 className="w-3 h-3" /> Accepted
+            <CheckCircle2 className="w-3 h-3" /> Hired
           </span>
         );
       case "rejected":
@@ -79,7 +77,7 @@ export default function AppliedGigsPage() {
       default:
         return (
           <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-bold uppercase tracking-wider">
-            <Clock className="w-3 h-3" /> Pending
+            <Hourglass className="w-3 h-3" /> Pending
           </span>
         );
     }
@@ -117,44 +115,49 @@ export default function AppliedGigsPage() {
         {/* Content */}
         {applications.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {applications.map((app) => (
-              <Link 
-                key={app.id} 
-                href={`/gig/${app.gig_id}`}
-                className="group relative bg-[#121217] border border-white/10 rounded-3xl p-6 hover:border-brand-purple/30 transition-all hover:-translate-y-1 overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-brand-purple/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                
-                <div className="relative z-10 flex flex-col h-full justify-between gap-6">
-                  <div>
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
-                        <Briefcase className="w-6 h-6 text-brand-blue" />
-                      </div>
-                      {getStatusBadge(app.status || 'pending')}
-                    </div>
-                    
-                    <h3 className="text-xl font-bold text-white mb-2 line-clamp-2">
-                      {app.gig?.title || "Unknown Gig"}
-                    </h3>
-                    
-                    <div className="flex items-center gap-2 text-white/50 text-sm">
-                      <IndianRupee className="w-4 h-4" />
-                      <span className="font-mono text-white/80">{app.gig?.price || "0"}</span>
-                    </div>
-                  </div>
+            {applications.map((app) => {
+              const gig = app.gigs; // Linked Data
+              if (!gig) return null;
 
-                  <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-xs text-white/30 font-medium">
-                      Applied {new Date(app.created_at).toLocaleDateString()}
-                    </span>
-                    <div className="flex items-center gap-1 text-xs font-bold text-white group-hover:text-brand-purple transition-colors">
-                      View Gig <ArrowUpRight className="w-3 h-3" />
+              return (
+                <Link 
+                  key={app.id} 
+                  href={`/gig/${gig.id}`}
+                  className="group relative bg-[#121217] border border-white/10 rounded-3xl p-6 hover:border-brand-purple/30 transition-all hover:-translate-y-1 overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand-purple/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  
+                  <div className="relative z-10 flex flex-col h-full justify-between gap-6">
+                    <div>
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                          <Briefcase className="w-6 h-6 text-brand-blue" />
+                        </div>
+                        {getStatusBadge(app.status)}
+                      </div>
+                      
+                      <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 group-hover:text-brand-purple transition-colors">
+                        {gig.title}
+                      </h3>
+                      
+                      <div className="flex items-center gap-2 text-white/50 text-sm">
+                        <IndianRupee className="w-4 h-4" />
+                        <span className="font-mono text-white/80">{gig.price?.toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-xs text-white/30 font-medium flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Applied {timeAgo(app.created_at)}
+                      </span>
+                      <div className="flex items-center gap-1 text-xs font-bold text-white group-hover:text-brand-purple transition-colors">
+                        View Gig <ArrowUpRight className="w-3 h-3" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         ) : (
           /* EMPTY STATE */
@@ -167,7 +170,7 @@ export default function AppliedGigsPage() {
               You haven't applied to any gigs yet. Explore the marketplace to find tasks you can help with.
             </p>
             <Link 
-              href="/dashboard" 
+              href="/feed" 
               className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
             >
               Browse Marketplace

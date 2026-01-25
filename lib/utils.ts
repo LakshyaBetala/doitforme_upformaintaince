@@ -1,21 +1,25 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-// Used for combining Tailwind classes safely
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Fixes the "5 hours ago" issue by forcing UTC parsing
 export function timeAgo(dateString: string | null) {
-  if (!dateString) return "Just now";
+  if (!dateString) return "";
 
-  // Append 'Z' if missing to tell JS this is a UTC time, not local
-  const safeDateString = dateString.endsWith("Z") ? dateString : `${dateString}Z`;
+  // 1. Force UTC interpretation if "Z" or offset is missing
+  // Supabase often returns "2023-10-25T10:00:00" (no Z). We must add it.
+  const safeDateString = dateString.endsWith("Z") || dateString.includes("+") 
+    ? dateString 
+    : `${dateString}Z`;
   
   const date = new Date(safeDateString);
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  // 2. Handle future dates (e.g. slight clock skew)
+  if (seconds < 0) return "Just now";
 
   let interval = Math.floor(seconds / 31536000);
   if (interval >= 1) return interval + "y ago";
@@ -35,7 +39,6 @@ export function timeAgo(dateString: string | null) {
   return "Just now";
 }
 
-// Formats numbers as Indian Rupees
 export function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",

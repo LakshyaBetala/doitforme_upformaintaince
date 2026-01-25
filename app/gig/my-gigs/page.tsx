@@ -10,8 +10,10 @@ import {
   MapPin, 
   IndianRupee, 
   Briefcase,
-  AlertCircle
+  AlertCircle,
+  Clock
 } from "lucide-react";
+import { timeAgo } from "@/lib/utils"; // Ensure this import exists
 
 export default function MyGigsPage() {
   const supabase = supabaseBrowser();
@@ -25,27 +27,14 @@ export default function MyGigsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // --- ROBUST FETCH STRATEGY ---
-        // 1. Try fetching using 'poster_id' (Most likely correct)
-        let { data, error: fetchError } = await supabase
+        // Fetch Gigs by Poster ID
+        const { data, error: fetchError } = await supabase
           .from("gigs")
           .select("*")
           .eq("poster_id", user.id)
           .order("created_at", { ascending: false });
 
-        // 2. If that failed (column doesn't exist), try 'user_id'
-        if (fetchError) {
-           console.warn("poster_id failed, trying user_id...");
-           const retry = await supabase
-            .from("gigs")
-            .select("*")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false });
-           
-           if (retry.error) throw retry.error;
-           data = retry.data;
-        }
-
+        if (fetchError) throw fetchError;
         setGigs(data || []);
 
       } catch (err: any) {
@@ -58,6 +47,17 @@ export default function MyGigsPage() {
 
     loadGigs();
   }, [supabase]);
+
+  // Helper for Status Colors
+  const getStatusColor = (status: string) => {
+      switch(status.toLowerCase()) {
+          case 'open': return 'bg-green-500/10 border-green-500/20 text-green-400';
+          case 'assigned': return 'bg-blue-500/10 border-blue-500/20 text-blue-400';
+          case 'completed': return 'bg-teal-500/10 border-teal-500/20 text-teal-400';
+          case 'cancelled': return 'bg-red-500/10 border-red-500/20 text-red-400';
+          default: return 'bg-white/5 border-white/10 text-white/50';
+      }
+  };
 
   if (loading) {
     return (
@@ -85,7 +85,7 @@ export default function MyGigsPage() {
             <h1 className="text-4xl font-black text-white tracking-tight">My Posted Gigs</h1>
           </div>
           <Link 
-            href="/gig/create" 
+            href="/post" 
             className="px-6 py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.2)]"
           >
             <Plus className="w-5 h-5" /> Post New Gig
@@ -114,15 +114,11 @@ export default function MyGigsPage() {
                 <div className="relative z-10 flex flex-col h-full justify-between gap-6">
                   <div>
                     <div className="flex justify-between items-start mb-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                        gig.status === 'open' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 
-                        gig.status === 'completed' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
-                        'bg-white/5 border-white/10 text-white/50'
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusColor(gig.status)}`}>
                         {gig.status}
                       </span>
-                      <span className="text-white/40 text-xs font-mono">
-                        {new Date(gig.created_at).toLocaleDateString()}
+                      <span className="text-white/40 text-xs font-mono flex items-center gap-1">
+                         <Clock className="w-3 h-3" /> {timeAgo(gig.created_at)}
                       </span>
                     </div>
                     
@@ -133,7 +129,7 @@ export default function MyGigsPage() {
                     <div className="flex flex-wrap gap-4 text-sm text-white/60">
                       <div className="flex items-center gap-1.5">
                         <IndianRupee className="w-4 h-4 text-white/40" />
-                        <span className="text-white font-bold">{gig.price}</span>
+                        <span className="text-white font-bold">{Number(gig.price).toLocaleString()}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <MapPin className="w-4 h-4 text-white/40" />
@@ -144,7 +140,7 @@ export default function MyGigsPage() {
 
                   <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs font-medium text-white/40">
                     <span className="flex items-center gap-1 group-hover:text-white transition-colors">
-                      <Briefcase className="w-3 h-3" /> Manage Applications
+                      <Briefcase className="w-3 h-3" /> Manage Gig
                     </span>
                   </div>
                 </div>
@@ -159,8 +155,7 @@ export default function MyGigsPage() {
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">No active gigs found</h2>
             <p className="text-white/50 max-w-md mb-8">
-              We couldn't find any gigs linked to your current User ID.
-              If you just recreated your account, your old gigs might be orphaned.
+              Start by posting your first gig to find help.
             </p>
             <Link 
               href="/post" 

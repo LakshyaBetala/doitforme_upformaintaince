@@ -24,7 +24,8 @@ import {
   CheckCircle2,
   AlertCircle,
   MessageSquare,
-  Calendar
+  Calendar,
+  Lock
 } from "lucide-react";
 
 // --- UTILITY: TIME AGO FORMATTER ---
@@ -87,7 +88,7 @@ export default function GigDetailPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   
   const [loading, setLoading] = useState(true);
-  const [verifyingPayment, setVerifyingPayment] = useState(false); // NEW STATE
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Flags
@@ -106,13 +107,10 @@ export default function GigDetailPage() {
   const [reviewText, setReviewText] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // ---------------------------------------------
-  // 1. PAYMENT VERIFICATION LOGIC (THE MISSING LINK)
-  // ---------------------------------------------
+  // --- PAYMENT VERIFICATION ---
   const verifyPayment = useCallback(async (orderId: string, workerId: string) => {
       if (verifyingPayment) return;
       setVerifyingPayment(true);
-      console.log("Verifying Payment...", orderId);
 
       try {
           const res = await fetch("/api/payments/verify-payment", {
@@ -123,22 +121,15 @@ export default function GigDetailPage() {
 
           const data = await res.json();
 
-          if (data.success) {
-              alert("Payment Verified! Gig has been assigned.");
-              // Force reload to clear params and fetch fresh data
+          if (data.success || data.message === "Transaction already processed") {
+              // Reload to refresh state (Worker becomes assigned, Status becomes assigned)
               window.location.href = `/gig/${id}`; 
           } else {
-              // If already processed, just redirect to clean URL
-              if (data.message === "Transaction already processed") {
-                  window.location.href = `/gig/${id}`;
-              } else {
-                  alert("Payment Verification Failed: " + (data.error || "Unknown error"));
-                  setVerifyingPayment(false);
-              }
+              alert("Payment Verification Failed: " + (data.error || "Unknown error"));
+              setVerifyingPayment(false);
           }
       } catch (e) {
           console.error("Verification error:", e);
-          alert("Network error verifying payment.");
           setVerifyingPayment(false);
       }
   }, [id, verifyingPayment]);
@@ -154,7 +145,7 @@ export default function GigDetailPage() {
   }, [searchParams, verifyPayment]);
 
 
-  // --- 2. DATA LOADING ---
+  // --- DATA LOADING ---
   useEffect(() => {
     if (!id) return;
 
@@ -201,7 +192,7 @@ export default function GigDetailPage() {
         }
 
         // Application Check
-        if (currentUser && !isUserOwner && !isUserWorker && gigData.status === 'open') {
+        if (currentUser && !isUserOwner && !isUserWorker) {
           const { data: application } = await supabase
             .from("applications")
             .select("id")
@@ -250,7 +241,6 @@ export default function GigDetailPage() {
   }, [id, supabase]);
 
   // --- HANDLERS ---
-
   const handleApplyNavigation = () => {
     if (!user) return alert("Please login to apply.");
     router.push(`/gig/${id}/apply`);
@@ -351,8 +341,8 @@ export default function GigDetailPage() {
   const getPosterName = () => isOwner ? "You" : posterDetails?.name || "Unknown";
   const getPosterInitial = () => getPosterName().charAt(0).toUpperCase();
 
-  // --- RENDER STATES ---
-  if (verifyingPayment) return <div className="min-h-screen bg-[#0B0B11] flex flex-col items-center justify-center text-white"><Loader2 className="w-12 h-12 animate-spin text-green-500 mb-4"/><h2 className="text-xl font-bold">Verifying Payment...</h2><p className="text-white/50">Please do not close this window.</p></div>;
+  // --- RENDER ---
+  if (verifyingPayment) return <div className="min-h-screen bg-[#0B0B11] flex flex-col items-center justify-center text-white"><Loader2 className="w-12 h-12 animate-spin text-green-500 mb-4"/><h2 className="text-xl font-bold">Verifying Payment...</h2></div>;
   if (loading) return <div className="min-h-screen bg-[#0B0B11] flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-purple" /></div>;
   if (error || !gig) return <div className="min-h-screen bg-[#0B0B11] flex flex-col items-center justify-center text-white"><AlertCircle className="w-8 h-8 text-red-500 mb-4"/><h1 className="text-xl">Gig Unavailable</h1><button onClick={() => router.push("/feed")} className="mt-4 px-6 py-2 bg-white text-black rounded-full font-bold">Return to Feed</button></div>;
 
@@ -487,7 +477,7 @@ export default function GigDetailPage() {
               </div>
 
               <div className="mt-8 space-y-3">
-                {/* Submit Work (Worker) */}
+                {/* 1. Submit Work (Worker Only) */}
                 {isWorker && isAssigned && !gig.delivery_link && (
                   <div className="space-y-3">
                     <div className="p-4 rounded-xl bg-[#0B0B11] border border-white/10">
@@ -500,7 +490,7 @@ export default function GigDetailPage() {
                   </div>
                 )}
 
-                {/* Review (Poster) */}
+                {/* 2. Review (Poster Only) */}
                 {isOwner && (isDelivered || gig.delivery_link) && !isCompleted && !isDisputed && (
                   <div className="p-5 rounded-2xl bg-[#0B0B11] border border-white/10 text-center space-y-4">
                     <div><h3 className="font-bold text-lg">Work Delivered</h3><p className="text-xs text-white/50">Review above.</p></div>
@@ -511,7 +501,7 @@ export default function GigDetailPage() {
                   </div>
                 )}
 
-                {/* Manage (Owner) */}
+                {/* 3. Manage (Owner) */}
                 {isOwner && status === 'open' && (
                   <div className="bg-[#121217] border border-white/10 rounded-2xl p-5 text-center space-y-4">
                     <div><span className="text-4xl font-black">{applicantCount}</span><p className="text-xs font-bold uppercase text-white/40">Applicants</p></div>
@@ -519,23 +509,33 @@ export default function GigDetailPage() {
                   </div>
                 )}
 
-                {/* Apply (Visitor) */}
-                {!isOwner && !isWorker && status === 'open' && (
-                    hasApplied ? (
-                        <button disabled className="w-full py-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-green-500 font-bold flex items-center justify-center gap-2 opacity-80"><CheckCircle2 className="w-5 h-5" /> Application Sent</button>
+                {/* 4. Apply / Rejected Status (Visitor/Applicant) */}
+                {!isOwner && !isWorker && (
+                    status === 'open' ? (
+                        hasApplied ? (
+                            <button disabled className="w-full py-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-green-500 font-bold flex items-center justify-center gap-2 opacity-80"><CheckCircle2 className="w-5 h-5" /> Application Sent</button>
+                        ) : (
+                            <button onClick={handleApplyNavigation} className="w-full py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform flex items-center justify-center gap-2"><Send className="w-5 h-5"/> Apply Now</button>
+                        )
                     ) : (
-                        <button onClick={handleApplyNavigation} className="w-full py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform flex items-center justify-center gap-2"><Send className="w-5 h-5"/> Apply Now</button>
+                        <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-center">
+                            <div className="inline-flex p-3 rounded-full bg-white/5 mb-3"><Lock className="w-6 h-6 text-white/40" /></div>
+                            <h3 className="font-bold text-lg text-white">Gig Closed</h3>
+                            <p className="text-xs text-white/50 mt-1">
+                                {hasApplied ? "Another applicant was selected." : "This gig is no longer accepting applications."}
+                            </p>
+                        </div>
                     )
                 )}
 
-                {/* Chat Button (Shared) */}
+                {/* 5. Chat Button (Shared) */}
                 {showChat && (
                   <Link href={`/chat/${id}`} className="block w-full py-3 bg-[#1A1A24] border border-white/10 text-white/70 font-bold rounded-xl text-center hover:bg-white/5 hover:text-white transition-all flex items-center justify-center gap-2">
                     <MessageSquare className="w-5 h-5 text-brand-purple" /> Open Project Chat
                   </Link>
                 )}
 
-                {/* Cancel (Owner) */}
+                {/* 6. Cancel (Owner) */}
                 {isOwner && status === "open" && (
                    <div className="pt-4 border-t border-white/5">
                       <button onClick={handleRefund} className="w-full py-3 rounded-xl bg-red-500/5 border border-red-500/10 text-red-500/60 hover:bg-red-500/10 hover:text-red-400 font-bold text-sm flex items-center justify-center gap-2"><AlertTriangle className="w-4 h-4" /> Cancel Gig</button>
