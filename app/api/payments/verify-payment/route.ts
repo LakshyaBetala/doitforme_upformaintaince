@@ -62,8 +62,6 @@ export async function POST(req: Request) {
     if (!gig) throw new Error("Gig not found");
 
     // 4. Calculate Fees
-    // Logic: User pays Price + Gateway Fee. 
-    // Platform takes 10% of Price. Worker gets 90% of Price.
     const basePrice = Number(gig.price); 
     const platformFee = basePrice * 0.10; 
     const amountHeld = basePrice * 0.90; // Net worker pay
@@ -122,6 +120,21 @@ export async function POST(req: Request) {
         console.error("Gig Update Error", gigUpdateError);
         throw gigUpdateError;
     }
+
+    // 8. UPDATE APPLICATIONS (Fix for Worker Status)
+    // Accept the selected worker
+    await supabaseAdmin
+        .from("applications")
+        .update({ status: "accepted" })
+        .eq("gig_id", gigId)
+        .eq("worker_id", workerId);
+
+    // Reject everyone else
+    await supabaseAdmin
+        .from("applications")
+        .update({ status: "rejected" })
+        .eq("gig_id", gigId)
+        .neq("worker_id", workerId);
 
     return NextResponse.json({ success: true, message: "Escrow funded and worker assigned successfully" });
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import { Send, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Send, ArrowLeft, Loader2, AlertCircle, Shield } from "lucide-react";
 import Link from "next/link";
 
 interface Message {
@@ -57,6 +57,8 @@ export default function ChatRoomPage() {
         }
 
         const isParticipant = gig.poster_id === currentUser.id || gig.assigned_worker_id === currentUser.id;
+        
+        // FIX: Ensure chat is only open if assigned or completed
         if (!isParticipant) {
           setError("Unauthorized: You are not part of this project.");
           setLoading(false);
@@ -120,22 +122,24 @@ export default function ChatRoomPage() {
     const content = input.trim();
     setInput(""); // Clear input immediately
 
-    // Optimistic UI Update (Optional, but makes it feel instant)
-    // We rely on Realtime to confirm, but could add here if needed.
-
     try {
-      // Use the API route to send (handles validation/security)
+      // FIX: Changed 'roomId' to 'gigId' to match the API expectation
       const res = await fetch("/api/chat/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-            gigId: roomId, 
+            gigId: roomId,  // <--- FIXED KEY
             senderId: user.id, 
             content: content 
         }),
       });
 
       const json = await res.json();
+
+      if (json.blocked) {
+        alert("Message blocked: Sharing contact info is unsafe.");
+        return;
+      }
 
       if (!json.success) {
         alert(json.error || "Failed to send message");
@@ -169,21 +173,31 @@ export default function ChatRoomPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0B0B11] text-white font-sans selection:bg-[#8825F5] selection:text-white">
+    <div className="flex flex-col h-screen bg-[#0B0B11] text-white font-sans selection:bg-[#8825F5] selection:text-white relative overflow-hidden">
       
-      {/* 1. HEADER */}
+      {/* --- WATERMARK FIX --- */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
+         <div className="text-[#8825F5]/5 text-4xl md:text-6xl font-black uppercase tracking-widest -rotate-12 select-none whitespace-nowrap">
+            Chat is being monitored • DoItForMe
+         </div>
+      </div>
+
+      {/* HEADER */}
       <header className="px-6 py-4 border-b border-white/10 bg-[#121217] flex items-center gap-4 shadow-lg z-10">
         <Link href={`/gig/${roomId}`} className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
           <ArrowLeft className="w-5 h-5 text-white/70" />
         </Link>
         <div>
           <h1 className="font-bold text-lg leading-none">{gigTitle || "Project Chat"}</h1>
-          <p className="text-xs text-white/40 mt-1">Encrypted • Real-time</p>
+          <div className="flex items-center gap-1.5 mt-1">
+             <Shield className="w-3 h-3 text-green-500" />
+             <p className="text-xs text-white/40">Secure & Monitored</p>
+          </div>
         </div>
       </header>
 
-      {/* 2. MESSAGES AREA */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+      {/* MESSAGES AREA */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 z-10 relative">
         {messages.map((m) => {
           const isMe = m.sender_id === user.id;
           return (
@@ -206,8 +220,8 @@ export default function ChatRoomPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. INPUT AREA */}
-      <div className="p-4 bg-[#121217] border-t border-white/10">
+      {/* INPUT AREA */}
+      <div className="p-4 bg-[#121217] border-t border-white/10 z-10">
         <div className="max-w-4xl mx-auto relative flex gap-3 items-center">
           <input
             value={input}

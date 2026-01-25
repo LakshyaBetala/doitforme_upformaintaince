@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { supabaseServer } from "@/lib/supabaseServer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,55 +21,53 @@ function isUnsafeMessage(text: string) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { roomId, message } = body;
+    const { gigId, senderId, content } = body; // Standardized names
 
-    if (!roomId || !message) {
+    if (!gigId || !content || !senderId) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // get current user from session
-    const authSupabase = await supabaseServer();
-    const { data: userData } = await authSupabase.auth.getUser();
-    const user = userData?.user ?? null;
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const senderId = user.id;
-
-    // verify participant of room
-    const { data: roomData, error: roomErr } = await supabase
-      .from("chat_rooms")
-      .select("*")
-      .eq("id", roomId)
+    // 1. Verify participant of gig
+    const { data: gig, error: gigErr } = await supabase
+      .from("gigs")
+      .select("poster_id, assigned_worker_id")
+      .eq("id", gigId)
       .single();
-    if (roomErr || !roomData) return NextResponse.json({ error: "Chat room not found" }, { status: 404 });
 
-    if (user.id !== roomData.poster_id && user.id !== roomData.worker_id) {
-      return NextResponse.json({ error: "You are not part of this chat." }, { status: 403 });
+    if (gigErr || !gig) return NextResponse.json({ error: "Gig not found" }, { status: 404 });
+
+    if (senderId !== gig.poster_id && senderId !== gig.assigned_worker_id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    if (isUnsafeMessage(message)) {
-      // log blocked message
+    // 2. Safety Check
+    if (isUnsafeMessage(content)) {
       await supabase.from("chat_blocked_logs").insert({
-        room_id: roomId,
+        room_id: gigId, // Maps to gig_id
         sender_id: senderId,
-        original_message: message,
-        reason: "Contact information detected",
+        message: content,
+        reason: "Contact Info Detected",
       });
-
-      return NextResponse.json({ success: false, blocked: true, message: "Message blocked for safety." });
+      return NextResponse.json({ success: false, blocked: true });
     }
 
-    // insert safe message using service role
-    const { data, error } = await supabase.from("chat_messages").insert({
-      room_id: roomId,
-      sender_id: senderId,
-      message,
-    }).select().single();
+    // 3. Insert Safe Message
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({
+        gig_id: gigId,
+        sender_id: senderId,
+        content: content,
+      })
+      .select()
+      .single();
 
     if (error) throw error;
 
     return NextResponse.json({ success: true, message: data });
+
   } catch (err: any) {
+    console.error("Chat Send Error:", err);
     return NextResponse.json({ error: err.message || "Failed to send" }, { status: 500 });
   }
 }
