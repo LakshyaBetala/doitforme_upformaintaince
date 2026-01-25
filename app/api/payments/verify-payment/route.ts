@@ -15,15 +15,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing verification data (order, gig, or worker)" }, { status: 400 });
     }
 
-    // 1. Verify Status with Cashfree DIRECTLY
-    const response = await fetch(`https://sandbox.cashfree.com/pg/orders/${orderId}/payments`, {
-        method: "GET",
-        headers: {
-            "x-client-id": process.env.CASHFREE_APP_ID!,
-            "x-client-secret": process.env.CASHFREE_SECRET_KEY!,
-            "x-api-version": "2023-08-01"
-        }
-    });
+  // ... inside app/api/payments/verify-payment/route.ts ...
+
+// 1. Verify Status with Cashfree DIRECTLY
+const CASHFREE_ENV = process.env.NODE_ENV === 'production' ? 'api' : 'sandbox'; // <--- ADD THIS
+
+const response = await fetch(`https://${CASHFREE_ENV}.cashfree.com/pg/orders/${orderId}/payments`, { // <--- UPDATE URL
+    method: "GET",
+    headers: {
+        "x-client-id": process.env.CASHFREE_APP_ID!,
+        "x-client-secret": process.env.CASHFREE_SECRET_KEY!,
+        "x-api-version": "2023-08-01"
+    }
+});
 
     const data = await response.json();
     

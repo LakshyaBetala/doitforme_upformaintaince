@@ -34,14 +34,20 @@ export default function ApplicantsPage() {
   const [applicants, setApplicants] = useState<any[]>([]);
 
   // Initialize Cashfree SDK
-  const [cashfree, setCashfree] = useState<any>(null);
-  useEffect(() => {
-    load({
-      mode: "sandbox" // Change to "production" when live
-    }).then((sdk: any) => {
-      setCashfree(sdk);
-    });
-  }, []);
+  // ... inside app/gig/[id]/applicants/page.tsx ...
+
+// Initialize Cashfree SDK
+const [cashfree, setCashfree] = useState<any>(null);
+useEffect(() => {
+  // FIX: Check if we are in production or dev
+  const mode = process.env.NODE_ENV === "production" ? "production" : "sandbox"; 
+  
+  load({
+    mode: mode // <--- Use the variable here
+  }).then((sdk: any) => {
+    setCashfree(sdk);
+  });
+}, []);
 
   useEffect(() => {
     if (!id) return;
