@@ -13,7 +13,7 @@ import {
   AlertCircle,
   Clock
 } from "lucide-react";
-import { timeAgo } from "@/lib/utils"; // Ensure this import exists
+import { timeAgo } from "@/lib/utils"; 
 
 export default function MyGigsPage() {
   const supabase = supabaseBrowser();

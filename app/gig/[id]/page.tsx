@@ -28,10 +28,14 @@ import {
   Lock
 } from "lucide-react";
 
-// --- UTILITY: TIME AGO FORMATTER ---
+// --- UTILITY: TIME AGO FORMATTER (UTC FIX) ---
 function timeAgo(dateString: string) {
   if (!dateString) return "";
-  const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+  // Force UTC interpretation
+  const safeDateString = dateString.endsWith("Z") || dateString.includes("+") 
+    ? dateString 
+    : `${dateString}Z`;
+  const seconds = Math.floor((Date.now() - new Date(safeDateString).getTime()) / 1000);
   if (seconds < 60) return "Just now";
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
@@ -45,13 +49,13 @@ function formatDate(dateString: string | null) {
     });
 }
 
-// --- TYPES ---
 interface GigData {
   id: string;
   title: string;
   description: string;
   price: number;
   location: string | null;
+  is_physical: boolean; // Field for logic
   status: string; 
   created_at: string;
   poster_id: string;
@@ -122,7 +126,6 @@ export default function GigDetailPage() {
           const data = await res.json();
 
           if (data.success || data.message === "Transaction already processed") {
-              // Reload to refresh state (Worker becomes assigned, Status becomes assigned)
               window.location.href = `/gig/${id}`; 
           } else {
               alert("Payment Verification Failed: " + (data.error || "Unknown error"));
@@ -247,15 +250,19 @@ export default function GigDetailPage() {
   };
 
   const handleDeliver = async () => {
-    if (!deliveryLink.trim()) return alert("Enter a valid link.");
-    if (!confirm("Submit work?")) return;
+    // Only check for link if it is NOT a physical gig
+    if (!gig?.is_physical && !deliveryLink.trim()) {
+        return alert("Please enter a link to your work (Google Drive, GitHub, etc).");
+    }
+    
+    if (!confirm("Are you sure you want to mark this work as done? The client will be notified.")) return;
 
     setSubmitting(true);
     try {
       const res = await fetch("/api/gig/deliver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gigId: id, workerId: user?.id, link: deliveryLink }),
+        body: JSON.stringify({ gigId: id, workerId: user?.id, deliveryLink }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
@@ -408,10 +415,19 @@ export default function GigDetailPage() {
           </div>
         )}
 
+        {isDisputed && (
+           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-4 text-red-400">
+             <AlertTriangle className="w-6 h-6" />
+             <div><h4 className="font-bold">Dispute Raised</h4><p className="text-sm opacity-80">Funds frozen: "{gig.dispute_reason}"</p></div>
+           </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* LEFT: Details */}
           <div className="lg:col-span-2 space-y-6">
+            
+            {/* Header Card */}
             <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[#121217] p-6 md:p-10 shadow-2xl">
               <div className="flex flex-col gap-6">
                 <div className="flex flex-wrap items-center gap-3">
@@ -438,13 +454,16 @@ export default function GigDetailPage() {
               <p className="text-white/80 leading-relaxed whitespace-pre-line text-lg font-light">{gig.description}</p>
             </div>
 
-            {/* Submission & Review */}
+            {/* Submission Area */}
             {(isDelivered || isCompleted || isDisputed) && (isOwner || isWorker) && gig.delivery_link && (
               <div className="rounded-[32px] border border-brand-purple/30 bg-[#121217] p-8">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-3"><div className="p-2 bg-brand-purple/20 rounded-lg text-brand-purple"><FileText className="w-5 h-5"/></div>Project Submission</h3>
                 <div className="bg-[#0B0B11] p-6 rounded-2xl border border-white/10 mb-4">
-                  <p className="text-white/40 text-xs font-bold uppercase mb-2">Deliverable Link</p>
-                  <a href={gig.delivery_link} target="_blank" rel="noreferrer" className="text-brand-purple text-lg font-mono hover:text-white flex items-center gap-2">{gig.delivery_link} <ExternalLink className="w-4 h-4 opacity-50"/></a>
+                  <p className="text-white/40 text-xs font-bold uppercase mb-2">Deliverable Link / Status</p>
+                  <a href={gig.delivery_link.startsWith("http") ? gig.delivery_link : "#"} target={gig.delivery_link.startsWith("http") ? "_blank" : "_self"} rel="noreferrer" className="text-brand-purple text-lg font-mono hover:text-white flex items-center gap-2">
+                    {gig.delivery_link} 
+                    {gig.delivery_link.startsWith("http") && <ExternalLink className="w-4 h-4 opacity-50"/>}
+                  </a>
                 </div>
               </div>
             )}
@@ -477,15 +496,29 @@ export default function GigDetailPage() {
               </div>
 
               <div className="mt-8 space-y-3">
+                
                 {/* 1. Submit Work (Worker Only) */}
                 {isWorker && isAssigned && !gig.delivery_link && (
                   <div className="space-y-3">
-                    <div className="p-4 rounded-xl bg-[#0B0B11] border border-white/10">
-                        <label className="text-xs text-white/50 block mb-2 font-bold uppercase">Submission URL</label>
-                        <input type="text" placeholder="https://..." value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} className="w-full bg-[#121217] border border-white/10 rounded-lg p-3 text-sm text-white focus:border-brand-purple outline-none" />
-                    </div>
+                    {!gig.is_physical ? (
+                       // Remote Gig Input
+                       <div className="p-4 rounded-xl bg-[#0B0B11] border border-white/10">
+                          <label className="text-xs text-white/50 block mb-2 font-bold uppercase">Submission URL</label>
+                          <input type="text" placeholder="https://..." value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} className="w-full bg-[#121217] border border-white/10 rounded-lg p-3 text-sm text-white focus:border-brand-purple outline-none" />
+                          <p className="text-[10px] text-white/40 mt-2">
+                             Please submit a Google Drive link or GitHub repository.
+                          </p>
+                       </div>
+                    ) : (
+                       // Physical Gig Info
+                       <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm">
+                          <p>Once you have completed the task in person, click below to notify the poster.</p>
+                       </div>
+                    )}
+                    
                     <button onClick={handleDeliver} disabled={submitting} className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-100 flex justify-center gap-2">
-                        {submitting ? <Loader2 className="animate-spin"/> : <Send className="w-5 h-5"/>} Submit Work
+                        {submitting ? <Loader2 className="animate-spin"/> : <Send className="w-5 h-5"/>} 
+                        {gig.is_physical ? "Mark as Completed" : "Submit Work"}
                     </button>
                   </div>
                 )}
@@ -519,7 +552,7 @@ export default function GigDetailPage() {
                         )
                     ) : (
                         <div className="p-5 rounded-2xl bg-white/5 border border-white/10 text-center">
-                            <div className="inline-flex p-3 rounded-full bg-white/5 mb-3"><Lock className="w-6 h-6 text-white/40" /></div>
+                            <div className="inline-flex p-3 rounded-full bg-white/5 mb-3"><AlertCircle className="w-6 h-6 text-white/40" /></div>
                             <h3 className="font-bold text-lg text-white">Gig Closed</h3>
                             <p className="text-xs text-white/50 mt-1">
                                 {hasApplied ? "Another applicant was selected." : "This gig is no longer accepting applications."}
