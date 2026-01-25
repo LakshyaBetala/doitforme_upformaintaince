@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 // -------------------------------------------------------
-// 1. "VOGUE" PRELOADER (Purple Text, 0.95s Reveal)
+// 1. "VOGUE" PRELOADER (White Curtain, Purple Text)
 // -------------------------------------------------------
 const words = ["HUSTLE", "EARN", "BUILD", "SCALE", "RELAX"];
 
@@ -25,7 +25,7 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
         if (prev === words.length - 1) {
           clearInterval(interval);
           setShowLogo(true);
-          setTimeout(onComplete, 1200); 
+          setTimeout(onComplete, 1000); 
           return prev;
         }
         return prev + 1;
@@ -38,8 +38,8 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
   return (
     <motion.div 
       initial={{ y: 0 }}
-      exit={{ y: "-100%", transition: { duration: 0.95, ease: [0.76, 0, 0.24, 1] } }} // 0.95s Duration
-      className="fixed inset-0 z-[9999] bg-[#020202] flex items-center justify-center overflow-hidden cursor-wait"
+      exit={{ y: "-100%", transition: { duration: 0.9, ease: [0.76, 0, 0.24, 1] } }} // 0.9s Reveal
+      className="fixed inset-0 z-[9999] bg-white flex items-center justify-center overflow-hidden cursor-wait"
     >
       <AnimatePresence mode="wait">
         {!showLogo ? (
@@ -49,8 +49,8 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
             animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, scale: 0.9, filter: "blur(5px)" }}
             transition={{ duration: 0.15 }}
-            // FORCED STYLE TO ENSURE PURPLE COLOR WORKS
-            style={{ color: '#8825F5' }} 
+            // PURPLE TEXT (Visible on White)
+            style={{ color: '#8825F5' }}
             className="text-7xl md:text-9xl font-black tracking-tighter"
           >
             {words[index]}
@@ -62,15 +62,15 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
             transition={{ duration: 0.6, ease: "circOut" }}
             className="relative flex flex-col items-center"
           >
-             {/* WHITE LOGO */}
-             <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter mix-blend-normal">
+             {/* BLACK LOGO (Contrast for White Background) */}
+             <h1 className="text-6xl md:text-8xl font-black text-black tracking-tighter mix-blend-normal">
                DoItForMe.
              </h1>
              <motion.div 
                initial={{ width: 0 }}
                animate={{ width: "100%" }}
                transition={{ duration: 0.8, delay: 0.1 }}
-               className="h-1 bg-gradient-to-r from-brand-purple to-brand-blue mt-4 w-full shadow-[0_0_30px_rgba(136,37,245,0.8)]"
+               className="h-1 bg-gradient-to-r from-brand-purple to-brand-blue mt-4 w-full"
              />
           </motion.div>
         )}
@@ -88,13 +88,12 @@ const gigsMock = [
   { id: 3, user: "Rohan M.", role: "Errand", title: "Drop Lab Record to Block 4", price: "₹150", icon: Bike, color: "bg-emerald-500" }
 ];
 
-// UPDATED: Using direct hex codes for style prop
 const testimonials = [
-  { role: "Poster", quote: "Got my assignment printed and delivered in 2 hours!", color: "#8825F5" }, // Purple
-  { role: "Worker", quote: "I made ₹2000 last weekend just helping with Figma designs.", color: "#3B82F6" }, // Blue
-  { role: "Student", quote: "The direct payment flow is so much better than other apps.", color: "#EC4899" }, // Pink
-  { role: "Dev", quote: "Found someone to debug my code instantly.", color: "#10B981" }, // Emerald
-  { role: "Artist", quote: "Sold 3 custom sketches for a festival through this.", color: "#EAB308" } // Yellow
+  { role: "Poster", quote: "Got my assignment printed and delivered in 2 hours!", color: "#8825F5" },
+  { role: "Worker", quote: "I made ₹2000 last weekend just helping with Figma designs.", color: "#3B82F6" },
+  { role: "Student", quote: "The direct payment flow is so much better than other apps.", color: "#EC4899" },
+  { role: "Dev", quote: "Found someone to debug my code instantly.", color: "#10B981" },
+  { role: "Artist", quote: "Sold 3 custom sketches for a festival through this.", color: "#EAB308" }
 ];
 
 const useScrollPosition = () => {
@@ -190,7 +189,7 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* --- ATMOSPHERE: LIGHTER BLUE & DEEP PURPLE --- */}
+      {/* --- ATMOSPHERE: VERY LIGHT BLUE (#DBEAFE) & DEEP PURPLE --- */}
       <div className="fixed inset-0 pointer-events-none z-0">
          {/* Lavender Tint */}
          <motion.div 
@@ -198,11 +197,11 @@ export default function LandingPage() {
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vw] bg-[#8825F5] rounded-full blur-[150px] opacity-10"
          />
-         {/* LIGHTER Blue Tint (#93C5FD) */}
+         {/* EXTRA LIGHT Blue Tint (#DBEAFE) */}
          <motion.div 
             animate={{ scale: [1, 1.25, 1], opacity: [0.08, 0.12, 0.08] }}
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            className="absolute top-[10%] right-[-10%] w-[50vw] h-[50vw] bg-[#93C5FD] rounded-full blur-[180px] opacity-10"
+            className="absolute top-[10%] right-[-10%] w-[50vw] h-[50vw] bg-[#DBEAFE] rounded-full blur-[180px] opacity-10"
          />
       </div>
 
@@ -384,7 +383,7 @@ export default function LandingPage() {
       </div>
 
       {/* -------------------------------------------------------
-          THE ESSENTIALS (4 Titles Grid)
+          THE ESSENTIALS (4 Titles Grid - Updated)
       --------------------------------------------------------- */}
       <section className="max-w-7xl mx-auto px-6 mb-32 relative z-10">
          <div className="mb-12 text-center md:text-left">
@@ -395,7 +394,9 @@ export default function LandingPage() {
             {[
                { title: "Zero Friction", desc: "No CVs. No Interviews. Just apply and get to work.", icon: Zap },
                { title: "Student Verified", desc: "Real students from verified colleges. No bots.", icon: Users },
+               // UPDATED:
                { title: "Payouts in 24h", desc: "Money sent to your UPI within 24 hours of job completion.", icon: Clock },
+               // UPDATED:
                { title: "24/7 Email Support", desc: "Dedicated email assistance for any dispute or issue.", icon: Mail }
             ].map((item, i) => (
                <div key={i} className="p-6 rounded-2xl bg-[#0A0A0A] border border-white/10 hover:border-brand-purple/50 transition-colors group">
