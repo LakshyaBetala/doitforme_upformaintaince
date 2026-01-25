@@ -47,17 +47,6 @@ export default function ContactPage() {
             </div>
           </div>
           
-          {/* Phone (Optional) */}
-          <div className="flex items-start gap-4">
-             <div className="p-3 bg-green-500/20 rounded-xl text-green-500">
-                <Phone className="w-6 h-6" />
-             </div>
-             <div>
-                <h3 className="font-bold text-white text-lg">Phone</h3>
-                <p className="text-white/60 text-sm">+91 999-999-9999</p>
-                <p className="text-white/40 text-xs mt-1">Available Mon-Fri, 10am - 6pm</p>
-             </div>
-          </div>
         </div>
       </div>
     </div>
