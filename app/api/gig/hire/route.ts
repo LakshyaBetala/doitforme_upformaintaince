@@ -11,15 +11,21 @@ export async function POST(req: Request) {
     {
       cookies: {
         get(name: string) { return cookieStore.get(name)?.value },
-        set(name: string, value: string, options: CookieOptions) { try { cookieStore.set({ name, value, ...options }) } catch (error) {} },
-        remove(name: string, options: CookieOptions) { try { cookieStore.set({ name, value: '', ...options }) } catch (error) {} },
+        set(name: string, value: string, options: CookieOptions) { 
+            try { cookieStore.set({ name, value, ...options }) } catch (error) {} 
+        },
+        remove(name: string, options: CookieOptions) { 
+            // FIX: 'value' is not in scope here, so we must explicitly set it to empty string
+            try { cookieStore.set({ name, value: '', ...options }) } catch (error) {} 
+        },
       },
     }
   )
 
   try {
     const body = await req.json();
-    const { gigId, workerId, price } = body;
+    // SECURITY: strictly ignore 'price' from the body
+    const { gigId, workerId } = body; 
 
     // 1. Authenticate User
     const { data: { user } } = await supabase.auth.getUser();
@@ -27,15 +33,31 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Prepare Cashfree Order Data
+    // 2. SECURITY: Fetch Real Price from DB
+    const { data: gig, error: gigError } = await supabase
+      .from("gigs")
+      .select("price, title")
+      .eq("id", gigId)
+      .single();
+
+    if (gigError || !gig) {
+        return NextResponse.json({ error: "Gig not found or invalid" }, { status: 404 });
+    }
+
+    // 3. Calculate Total Amount (Including 2% Gateway Fee)
+    const basePrice = Number(gig.price);
+    const surcharge = Math.ceil(basePrice * 0.02); // 2% Surcharge
+    const totalAmountToCharge = basePrice + surcharge;
+
+    // 4. Prepare Cashfree Order Data
     const orderId = `ORDER_${gigId}_${Date.now()}`;
     
-    // Return URL: This is where Cashfree sends the user after payment
-    // We pass worker_id so the verification route knows who to assign
+    // FIX: Return URL must point to the FRONTEND page, not the API
+    // We add query params so the frontend knows to verify the payment on load
     const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/gig/${gigId}?payment=verify&order_id={order_id}&worker_id=${workerId}`;
 
     const payload = {
-        order_amount: price,
+        order_amount: totalAmountToCharge,
         order_currency: "INR",
         order_id: orderId,
         customer_details: {
@@ -46,20 +68,23 @@ export async function POST(req: Request) {
         },
         order_meta: {
             return_url: returnUrl,
-            notify_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/cashfree` // Optional backup
+            notify_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/cashfree` 
         },
         order_tags: {
             gig_id: gigId,
             worker_id: workerId,
             type: "GIG_PAYMENT"
-        }
+        },
+        order_note: `Gig: ${gig.title}`
     };
 
-    console.log("Initiating Payment via Fetch:", orderId);
+    console.log("Initiating Payment:", orderId, "| Amount:", totalAmountToCharge);
 
-    // 3. Call Cashfree API Directly (Bypasses SDK Version Issues)
-    // NOTE: using 'sandbox.cashfree.com'. Change to 'api.cashfree.com' for production.
-    const response = await fetch("https://sandbox.cashfree.com/pg/orders", { 
+    // 5. Dynamic URL (Sandbox vs Production)
+    const CASHFREE_ENV = process.env.NODE_ENV === 'production' ? 'api' : 'sandbox';
+    const cashfreeUrl = `https://${CASHFREE_ENV}.cashfree.com/pg/orders`;
+
+    const response = await fetch(cashfreeUrl, { 
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -79,7 +104,7 @@ export async function POST(req: Request) {
 
     const paymentSessionId = data.payment_session_id;
 
-    // 4. Mark Gig as Payment Pending in DB
+    // 6. Mark Gig as Payment Pending in DB
     await supabase.from("gigs").update({ 
         payment_gateway: 'CASHFREE',
         gateway_order_id: orderId 
