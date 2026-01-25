@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,7 +9,6 @@ import {
   Clock, 
   MapPin, 
   IndianRupee, 
-  User, 
   ArrowLeft, 
   ShieldCheck, 
   Send, 
@@ -17,14 +16,15 @@ import {
   Maximize2, 
   AlertTriangle, 
   Briefcase, 
-  Users,
   CheckCircle, 
   FileText, 
   Star, 
   ExternalLink, 
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  MessageSquare,
+  Calendar
 } from "lucide-react";
 
 // --- UTILITY: TIME AGO FORMATTER ---
@@ -37,22 +37,30 @@ function timeAgo(dateString: string) {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-// --- TYPES FOR SAFETY ---
+function formatDate(dateString: string | null) {
+    if (!dateString) return "No Deadline";
+    return new Date(dateString).toLocaleDateString('en-IN', {
+        day: 'numeric', month: 'short', year: 'numeric'
+    });
+}
+
+// --- TYPES ALIGNED WITH SCHEMA ---
 interface GigData {
   id: string;
   title: string;
   description: string;
   price: number;
   location: string | null;
-  status: 'open' | 'ASSIGNED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
+  status: string; // 'draft', 'open', 'assigned', 'completed', 'cancelled', 'disputed'
   created_at: string;
   poster_id: string;
   assigned_worker_id?: string;
   delivery_link?: string;
   delivered_at?: string;
   images?: string[];
-  user_id?: string; // Legacy support if schema varies
   dispute_reason?: string;
+  deadline?: string; // Added from schema
+  escrow_status?: string;
 }
 
 interface UserProfile {
@@ -69,6 +77,7 @@ export default function GigDetailPage() {
   const supabase = supabaseBrowser();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params?.id as string;
 
   // --- STATE MANAGEMENT ---
@@ -103,6 +112,12 @@ export default function GigDetailPage() {
   useEffect(() => {
     if (!id) return;
 
+    // Payment Success Toast Logic
+    if (searchParams.get("payment") === "success") {
+        // You could add a toast library here
+        console.log("Payment Successful - Gig Started");
+    }
+
     const loadGigAndUser = async () => {
       try {
         setLoading(true);
@@ -133,14 +148,14 @@ export default function GigDetailPage() {
         setGig(gigData);
 
         // 3. Determine Roles
-        const posterId = gigData.poster_id || gigData.user_id;
+        const posterId = gigData.poster_id;
         const isUserOwner = currentUser && (currentUser.id === posterId);
         setIsOwner(!!isUserOwner);
 
         const isUserWorker = currentUser && (currentUser.id === gigData.assigned_worker_id);
         setIsWorker(!!isUserWorker);
 
-        // 4. Fetch Additional Data based on Role
+        // 4. Fetch Poster Details
         if (posterId) {
           const { data: posterData } = await supabase
             .from("users") 
@@ -175,7 +190,7 @@ export default function GigDetailPage() {
         }
 
         // 7. Resolve Image URLs
-        if (gigData.images && Array.isArray(gigData.images)) {
+        if (gigData.images && Array.isArray(gigData.images) && gigData.images.length > 0) {
           const urls = gigData.images
             .map((path: string) => {
               if (path.startsWith('http')) return path;
@@ -194,12 +209,22 @@ export default function GigDetailPage() {
     };
 
     loadGigAndUser();
-  }, [id, supabase]);
+
+    // 8. Realtime Subscription for Status Updates
+    const channel = supabase.channel(`gig_detail_${id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'gigs', filter: `id=eq.${id}` }, 
+      (payload) => {
+         setGig((prev: any) => ({ ...prev, ...payload.new }));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+
+  }, [id, supabase, searchParams]);
 
 
   // --- HANDLERS ---
 
-  // 1. Apply Logic
   const handleApplyNavigation = () => {
     if (!user) {
       alert("You must be logged in to apply.");
@@ -208,7 +233,6 @@ export default function GigDetailPage() {
     router.push(`/gig/${id}/apply`);
   };
 
-  // 2. Worker: Submit Delivery
   const handleDeliver = async () => {
     if (!deliveryLink.trim()) {
       alert("Please enter a valid link to your work (Google Drive, GitHub, etc).");
@@ -222,12 +246,13 @@ export default function GigDetailPage() {
       const res = await fetch("/api/gig/deliver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gigId: id, deliveryLink }),
+        body: JSON.stringify({ gigId: id, workerId: user?.id, link: deliveryLink }),
       });
 
       const json = await res.json();
       
       if (res.ok && json.success) {
+        alert("Work submitted successfully!");
         window.location.reload();
       } else {
         throw new Error(json.error || "Failed to submit work");
@@ -239,7 +264,6 @@ export default function GigDetailPage() {
     }
   };
 
-  // 3. Poster: Complete & Review
   const handleComplete = async () => {
     if (!rating) {
       alert("Please select a star rating.");
@@ -273,7 +297,6 @@ export default function GigDetailPage() {
     }
   };
 
-  // 4. Poster: Cancel Gig
   const handleRefund = async () => {
     const confirmed = confirm("Are you sure? This will cancel the gig. This action cannot be undone.");
     if (!confirmed) return;
@@ -298,7 +321,6 @@ export default function GigDetailPage() {
     }
   };
 
-  // 5. Handle Dispute Logic
   const handleDispute = async () => {
     const reason = prompt("Please explain why you are rejecting this work (min 50 chars). This will freeze funds for Admin review.");
     
@@ -329,7 +351,6 @@ export default function GigDetailPage() {
     }
   };
 
-  // --- RENDER HELPERS ---
   const getPosterName = () => {
     if (isOwner) return "You";
     return posterDetails?.name || posterDetails?.email?.split('@')[0] || "Unknown User";
@@ -340,7 +361,6 @@ export default function GigDetailPage() {
     return name.charAt(0).toUpperCase();
   };
 
-  // --- LOADING STATE ---
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0B0B11] flex items-center justify-center">
@@ -352,7 +372,6 @@ export default function GigDetailPage() {
     );
   }
   
-  // --- ERROR STATE ---
   if (error || !gig) {
     return (
       <div className="min-h-screen bg-[#0B0B11] flex flex-col items-center justify-center text-white p-4 text-center">
@@ -371,7 +390,14 @@ export default function GigDetailPage() {
     );
   }
 
-  // --- MAIN RENDER ---
+  // --- STATUS HELPERS ---
+  const status = gig.status.toLowerCase();
+  const isAssigned = status === 'assigned';
+  const isDelivered = status === 'delivered' || !!gig.delivery_link; // Use link as fallback check
+  const isCompleted = status === 'completed';
+  const isDisputed = status === 'disputed';
+  const isCancelled = status === 'cancelled';
+
   return (
     <div className="min-h-screen bg-[#0B0B11] text-white p-4 md:p-8 flex justify-center pb-24 relative selection:bg-brand-purple selection:text-white">
       
@@ -453,7 +479,7 @@ export default function GigDetailPage() {
         </div>
 
         {/* --- STATUS NOTIFICATIONS --- */}
-        {gig.status === 'DELIVERED' && (
+        {isDelivered && !isCompleted && !isDisputed && (
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 md:p-6 flex items-start md:items-center gap-4 text-blue-400 animate-in fade-in slide-in-from-top-4">
             <div className="p-2 bg-blue-500/20 rounded-full shrink-0">
               <CheckCircle2 className="w-6 h-6" />
@@ -469,8 +495,7 @@ export default function GigDetailPage() {
           </div>
         )}
         
-        {/* --- UPDATED COMPLETE MESSAGE --- */}
-        {gig.status === 'COMPLETED' && (
+        {isCompleted && (
           <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 md:p-6 flex items-center gap-4 text-green-400">
              <div className="p-2 bg-green-500/20 rounded-full shrink-0">
                <ShieldCheck className="w-6 h-6" />
@@ -479,10 +504,9 @@ export default function GigDetailPage() {
                <h4 className="font-bold text-lg">Gig Completed</h4>
                <p className="text-sm opacity-80">
                    This transaction has been finalized.
-                   {/* SHOW FOR WORKERS ONLY */}
                    {isWorker && (
                        <span className="block mt-1 font-bold text-green-300">
-                           Note: Payment will reflect in your UPI account within 24-48 hours due to banking settlement times.
+                           Note: Payment will reflect in your UPI account within 24-48 hours.
                        </span>
                    )}
                </p>
@@ -490,7 +514,7 @@ export default function GigDetailPage() {
           </div>
         )}
 
-        {gig.status === 'DISPUTED' && (
+        {isDisputed && (
            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 md:p-6 flex items-center gap-4 text-red-400">
              <div className="p-2 bg-red-500/20 rounded-full shrink-0">
                <AlertTriangle className="w-6 h-6" />
@@ -502,7 +526,7 @@ export default function GigDetailPage() {
            </div>
         )}
 
-        {gig.status === 'CANCELLED' && (
+        {isCancelled && (
            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 md:p-6 flex items-center gap-4 text-red-400">
              <div className="p-2 bg-red-500/20 rounded-full shrink-0">
                <AlertTriangle className="w-6 h-6" />
@@ -528,18 +552,24 @@ export default function GigDetailPage() {
                 {/* Status Badges */}
                 <div className="flex flex-wrap items-center gap-3">
                   <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm ${
-                    gig.status === 'open' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 
-                    gig.status === 'ASSIGNED' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
-                    gig.status === 'DELIVERED' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' :
-                    gig.status === 'COMPLETED' ? 'bg-teal-500/10 border-teal-500/20 text-teal-400' :
-                    gig.status === 'DISPUTED' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+                    status === 'open' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 
+                    status === 'assigned' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
+                    status === 'delivered' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' :
+                    status === 'completed' ? 'bg-teal-500/10 border-teal-500/20 text-teal-400' :
+                    status === 'disputed' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
                     'bg-red-500/10 border-red-500/20 text-red-400'
                   }`}>
-                    {gig.status.replace(/_/g, " ")}
+                    {status.toUpperCase()}
                   </span>
                   <span className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/60 text-xs font-medium">
-                    <Clock className="w-3.5 h-3.5" /> {timeAgo(gig.created_at)}
+                    <Clock className="w-3.5 h-3.5" /> Posted {timeAgo(gig.created_at)}
                   </span>
+                  {/* DEADLINE DISPLAY */}
+                  {gig.deadline && (
+                      <span className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
+                        <Calendar className="w-3.5 h-3.5" /> Deadline: {formatDate(gig.deadline)}
+                      </span>
+                  )}
                 </div>
 
                 {/* Title */}
@@ -588,7 +618,7 @@ export default function GigDetailPage() {
             </div>
 
             {/* --- SUBMISSION DISPLAY (Public/Restricted View) --- */}
-            {(gig.status === 'DELIVERED' || gig.status === 'COMPLETED' || gig.status === 'DISPUTED') && (isOwner || isWorker) && (
+            {(isDelivered || isCompleted || isDisputed) && (isOwner || isWorker) && gig.delivery_link && (
               <div className="rounded-[32px] border border-brand-purple/30 bg-[#121217] p-8 relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-purple to-brand-blue"></div>
                 <div className="absolute inset-0 bg-brand-purple/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
@@ -687,7 +717,8 @@ export default function GigDetailPage() {
               <div className="mt-8 space-y-3">
                 
                 {/* --- A. WORKER VIEW: Submit --- */}
-                {isWorker && gig.status === 'ASSIGNED' && (
+                {/* Logic: User is worker, Status is Assigned, Link is NOT empty (already submitted) */}
+                {isWorker && isAssigned && !gig.delivery_link && (
                   <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4">
                     <div className="p-4 rounded-xl bg-[#0B0B11] border border-white/10">
                         <label className="text-xs text-white/50 block mb-2 font-bold uppercase">Submission URL</label>
@@ -710,13 +741,14 @@ export default function GigDetailPage() {
                   </div>
                 )}
 
-                {/* --- B. POSTER VIEW: Review (UPDATED) --- */}
-                {isOwner && gig.status === 'DELIVERED' && (
+                {/* --- B. POSTER VIEW: Review --- */}
+                {/* Logic: User is Owner, Status is Delivered (or link exists) */}
+                {isOwner && (isDelivered || gig.delivery_link) && !isCompleted && !isDisputed && (
                   <div className="p-5 rounded-2xl bg-[#0B0B11] border border-white/10 text-center animate-in fade-in space-y-4">
                     <div>
                         <h3 className="font-bold text-white text-lg">Work Delivered</h3>
                         <p className="text-xs text-white/50 mt-1">
-                           Auto-approval in 24 hours. Review carefully.
+                           Review the work above. Approval releases funds.
                         </p>
                     </div>
                     
@@ -741,7 +773,7 @@ export default function GigDetailPage() {
                 )}
 
                 {/* --- C. OWNER VIEW: Manage (Open) --- */}
-                {isOwner && gig.status === 'open' && (
+                {isOwner && status === 'open' && (
                   <div className="bg-[#121217] border border-white/10 rounded-2xl p-5 relative overflow-hidden group hover:border-brand-purple/50 transition-colors cursor-default">
                     <div className="relative z-10 text-center space-y-4">
                         <div className="flex flex-col items-center">
@@ -759,7 +791,7 @@ export default function GigDetailPage() {
                 )}
 
                 {/* --- D. VISITOR VIEW: Apply / Applied --- */}
-                {!isOwner && !isWorker && gig.status === 'open' && (
+                {!isOwner && !isWorker && status === 'open' && (
                     hasApplied ? (
                         <button 
                             disabled 
@@ -782,17 +814,18 @@ export default function GigDetailPage() {
                 )}
 
                 {/* --- SHARED: Open Chat --- */}
-                {(isWorker || isOwner) && (gig.status === 'ASSIGNED' || gig.status === 'DELIVERED' || gig.status === 'COMPLETED' || gig.status === 'DISPUTED') && (
+                {/* Shows if assigned, delivered, completed, disputed. Links to /chat/[roomId] */}
+                {(isWorker || isOwner) && (status === 'assigned' || status === 'delivered' || status === 'completed' || status === 'disputed') && (
                   <Link 
-                    href={`/gig/${id}/chat`} 
+                    href={`/chat/${id}`} 
                     className="block w-full py-3 bg-[#1A1A24] border border-white/10 text-white/70 font-bold rounded-xl text-center hover:bg-white/5 hover:text-white transition-all flex items-center justify-center gap-2"
                   >
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div> Open Chat
+                    <MessageSquare className="w-5 h-5 text-brand-purple" /> Open Project Chat
                   </Link>
                 )}
 
                 {/* --- OWNER: Refund/Cancel (Only if NOT Assigned yet) --- */}
-                {isOwner && gig.status === "open" && (
+                {isOwner && status === "open" && (
                    <div className="pt-4 border-t border-white/5">
                       <button
                         onClick={handleRefund}
