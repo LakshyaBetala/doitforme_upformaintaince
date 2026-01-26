@@ -32,6 +32,17 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* --- FIX: STOP AUTOFILL COLOR CHANGE --- */
+/* This forces the background to stay dark (#0B0B11 matches your input bg) even when browser autofills */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px #0B0B11 inset !important;
+    -webkit-text-fill-color: white !important;
+    caret-color: white !important;
+}
+
 /* ---------------------------------------
    CUSTOM CURSOR LOGIC (PRESERVED)
 --------------------------------------- */

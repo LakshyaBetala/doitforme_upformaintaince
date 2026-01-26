@@ -394,9 +394,10 @@ export default function GigDetailPage() {
       <div className="w-full max-w-6xl relative z-10 space-y-6">
         {/* Nav */}
         <div className="flex justify-between items-center mb-4">
-          <Link href={hasApplied ? "/gig/applied" : "/gig/my-gigs"} className="flex items-center gap-2 text-white/50 hover:text-white group">
+          {/* FIX: Always link to /dashboard */}
+          <Link href="/dashboard" className="flex items-center gap-2 text-white/50 hover:text-white group">
             <div className="p-2 rounded-full bg-white/5 border border-white/5"><ArrowLeft className="w-5 h-5" /></div>
-            <span className="text-sm font-medium">Back</span>
+            <span className="text-sm font-medium">Back to Dashboard</span>
           </Link>
         </div>
 

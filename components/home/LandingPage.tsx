@@ -31,7 +31,7 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
         }
         return prev + 1;
       });
-    }, 180);
+    }, 200);
 
     return () => clearInterval(interval);
   }, [onComplete]);

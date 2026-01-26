@@ -77,7 +77,9 @@ function VerifyContent() {
     if (e.key === "ArrowRight" && idx < 5) focusInput(idx + 1);
   };
 
+  // --- FIX: Added e.preventDefault() for clean pasting ---
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault(); // Prevents the browser from filling the first input with the whole string
     const paste = e.clipboardData.getData("text");
     if (!/^[0-9]+$/.test(paste)) return;
     const chars = paste.split("").slice(0, 6);
@@ -90,6 +92,7 @@ function VerifyContent() {
     focusInput(last);
   };
 
+  // Auto-submit when all digits are filled
   useEffect(() => {
     if (digits.every((d) => d !== "")) verifyOTP();
     // eslint-disable-next-line react-hooks/exhaustive-deps
