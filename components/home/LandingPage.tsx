@@ -7,7 +7,8 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowRight, CheckCircle2, ShieldCheck, Zap, Lock, 
-  DollarSign, ChevronDown, Quote, Star, Wallet, Code2, PenTool, Bike, Users, Mail, Clock
+  DollarSign, ChevronDown, Quote, Star, Wallet, Code2, PenTool, Bike, Users, Mail, Clock,
+  Linkedin, Instagram // Added Social Icons
 } from "lucide-react";
 
 // -------------------------------------------------------
@@ -194,15 +195,15 @@ export default function LandingPage() {
       <div className="fixed inset-0 pointer-events-none z-0">
          {/* Lavender Tint */}
          <motion.div 
-            animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.15, 0.1] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vw] bg-[#8825F5] rounded-full blur-[150px] opacity-10"
+           animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.15, 0.1] }}
+           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+           className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vw] bg-[#8825F5] rounded-full blur-[150px] opacity-10"
          />
          {/* LIGHTER Blue Tint (#93C5FD) */}
          <motion.div 
-            animate={{ scale: [1, 1.25, 1], opacity: [0.08, 0.12, 0.08] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            className="absolute top-[10%] right-[-10%] w-[50vw] h-[50vw] bg-[#93C5FD] rounded-full blur-[180px] opacity-10"
+           animate={{ scale: [1, 1.25, 1], opacity: [0.08, 0.12, 0.08] }}
+           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+           className="absolute top-[10%] right-[-10%] w-[50vw] h-[50vw] bg-[#93C5FD] rounded-full blur-[180px] opacity-10"
          />
       </div>
 
@@ -347,8 +348,8 @@ export default function LandingPage() {
                <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-100 rounded-full text-green-600"><CheckCircle2 size={20} /></div>
                   <div>
-                     <div className="text-xs font-bold uppercase tracking-wider text-zinc-500">Escrow</div>
-                     <div className="text-sm font-bold">Funds Released</div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-zinc-500">Escrow</div>
+                      <div className="text-sm font-bold">Funds Released</div>
                   </div>
                </div>
             </motion.div>
@@ -446,21 +447,21 @@ export default function LandingPage() {
 
             <div className="md:col-span-2 rounded-3xl border border-white/10 bg-[#0A0A0A] p-8 flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="flex-1">
-                 <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 mb-6"><DollarSign size={24} /></div>
-                 <h3 className="text-2xl font-bold text-white mb-3">The Economics</h3>
-                 <ul className="space-y-3 text-zinc-400">
+                  <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 mb-6"><DollarSign size={24} /></div>
+                  <h3 className="text-2xl font-bold text-white mb-3">The Economics</h3>
+                  <ul className="space-y-3 text-zinc-400">
                     <li className="flex items-center gap-3"><CheckCircle2 size={18} className="text-green-500"/> Free to post gigs</li>
                     <li className="flex items-center gap-3"><CheckCircle2 size={18} className="text-green-500"/> Free to apply for gigs</li>
                     <li className="flex items-center gap-3"><CheckCircle2 size={18} className="text-zinc-500"/> 10% Platform fee on payout</li>
-                 </ul>
-              </div>
-              <div className="bg-black p-6 rounded-2xl border border-white/10 w-full md:w-64 text-center relative overflow-hidden">
-                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-purple to-brand-blue"></div>
-                 <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Payout Example</span>
-                 <div className="mt-4 flex justify-between text-sm"><span className="text-zinc-400">Earned</span><span className="text-white">₹1000</span></div>
-                 <div className="mt-2 flex justify-between text-sm"><span className="text-zinc-400">Fee (10%)</span><span className="text-red-400">-₹100</span></div>
-                 <div className="mt-4 pt-4 border-t border-white/10 flex justify-between font-bold text-lg"><span className="text-white">You Get</span><span className="text-green-400">₹900</span></div>
-              </div>
+                  </ul>
+               </div>
+               <div className="bg-black p-6 rounded-2xl border border-white/10 w-full md:w-64 text-center relative overflow-hidden">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-purple to-brand-blue"></div>
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Payout Example</span>
+                  <div className="mt-4 flex justify-between text-sm"><span className="text-zinc-400">Earned</span><span className="text-white">₹1000</span></div>
+                  <div className="mt-2 flex justify-between text-sm"><span className="text-zinc-400">Fee (10%)</span><span className="text-red-400">-₹100</span></div>
+                  <div className="mt-4 pt-4 border-t border-white/10 flex justify-between font-bold text-lg"><span className="text-white">You Get</span><span className="text-green-400">₹900</span></div>
+               </div>
             </div>
         </div>
       </section>
@@ -470,26 +471,26 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
            <h2 className="text-3xl font-bold text-white mb-12 text-center">Simple Flow</h2>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-              {/* THE PURPLE ANIMATED LINE */}
-              <div className="hidden md:block absolute top-12 left-[15%] right-[15%] h-[2px] bg-white/5 rounded-full overflow-hidden">
+             {/* THE PURPLE ANIMATED LINE */}
+             <div className="hidden md:block absolute top-12 left-[15%] right-[15%] h-[2px] bg-white/5 rounded-full overflow-hidden">
                  <motion.div 
-                    animate={{ x: ["-100%", "100%"] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-                    className="w-1/2 h-full bg-gradient-to-r from-transparent via-brand-purple to-transparent"
+                   animate={{ x: ["-100%", "100%"] }}
+                   transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                   className="w-1/2 h-full bg-gradient-to-r from-transparent via-brand-purple to-transparent"
                  />
-              </div>
-              
-              {[
-                { step: "01", title: "Create Account", desc: "Sign up and upload your Student ID for verification." },
-                { step: "02", title: "Post or Apply", desc: "Posters pay into safe Escrow. Workers apply to tasks." },
-                { step: "03", title: "Release Funds", desc: "Work approved? Funds are released directly to the worker." }
-              ].map((item, i) => (
-                <div key={i} className="relative z-10 flex flex-col items-center text-center">
-                   <div className="w-16 h-16 rounded-full bg-background border border-white/10 flex items-center justify-center text-xl font-bold text-white mb-6 shadow-xl z-20">{item.step}</div>
-                   <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
-                   <p className="text-zinc-400 max-w-xs">{item.desc}</p>
-                </div>
-              ))}
+             </div>
+             
+             {[
+               { step: "01", title: "Create Account", desc: "Sign up and upload your Student ID for verification." },
+               { step: "02", title: "Post or Apply", desc: "Posters pay into safe Escrow. Workers apply to tasks." },
+               { step: "03", title: "Release Funds", desc: "Work approved? Funds are released directly to the worker." }
+             ].map((item, i) => (
+               <div key={i} className="relative z-10 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 rounded-full bg-background border border-white/10 flex items-center justify-center text-xl font-bold text-white mb-6 shadow-xl z-20">{item.step}</div>
+                  <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-zinc-400 max-w-xs">{item.desc}</p>
+               </div>
+             ))}
            </div>
         </div>
       </section>
@@ -528,8 +529,8 @@ export default function LandingPage() {
         <div className="text-center mb-12">
            <h2 className="text-3xl font-bold text-white mb-6">Common Questions</h2>
            <div className="inline-flex bg-white/5 rounded-full p-1 border border-white/10">
-              <button onClick={() => setFaqTab("students")} className={`px-8 py-2 rounded-full text-sm font-bold transition-all duration-300 ${faqTab === "students" ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}>Students</button>
-              <button onClick={() => setFaqTab("posters")} className={`px-8 py-2 rounded-full text-sm font-bold transition-all duration-300 ${faqTab === "posters" ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}>Posters</button>
+             <button onClick={() => setFaqTab("students")} className={`px-8 py-2 rounded-full text-sm font-bold transition-all duration-300 ${faqTab === "students" ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}>Students</button>
+             <button onClick={() => setFaqTab("posters")} className={`px-8 py-2 rounded-full text-sm font-bold transition-all duration-300 ${faqTab === "posters" ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}>Posters</button>
            </div>
         </div>
 
@@ -551,18 +552,50 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer className="w-full bg-[#020202] py-12 border-t border-white/5 relative z-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
+          
+          {/* Logo & Copyright */}
           <div className="text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
               <div className="relative w-6 h-6 grayscale opacity-50"><Image src="/logo.svg" alt="logo" fill className="object-contain" /></div>
               <span className="font-bold text-lg text-white">DoItForMe</span>
             </div>
-            <p className="text-xs text-zinc-600">© 2025 DoItForMe Inc.</p>
+            <p className="text-xs text-zinc-600">© 2026 DoItForMe Inc.</p>
           </div>
-          <div className="flex gap-8 text-sm text-zinc-500">
-             <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-             <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
-             <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+
+          {/* Links & Socials */}
+          <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
+             <div className="flex gap-6 text-sm text-zinc-500">
+               <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+               <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
+               <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+             </div>
+             
+             {/* Divider (Desktop only) */}
+             <div className="hidden md:block h-4 w-px bg-white/10"></div>
+
+             {/* Social Icons */}
+             <div className="flex gap-4">
+               <a 
+                 href="https://www.linkedin.com/company/doitforme1/" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
+                 className="text-zinc-500 hover:text-[#0A66C2] transition-colors"
+                 aria-label="LinkedIn"
+               >
+                 <Linkedin size={20} />
+               </a>
+               <a 
+                 href="https://www.instagram.com/doitforme.in/" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
+                 className="text-zinc-500 hover:text-[#E4405F] transition-colors"
+                 aria-label="Instagram"
+               >
+                 <Instagram size={20} />
+               </a>
+             </div>
           </div>
+
         </div>
       </footer>
     </div>
