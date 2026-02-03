@@ -147,7 +147,8 @@ function VerifyContent() {
                 email: data.user.email,
                 name: meta.full_name, // Extracted from metadata
                 phone: meta.phone,
-                college: meta.college
+                college: meta.college,
+                upi_id: meta.upi_id // Ensure UPI provided at signup is saved
             }),
         });
     } catch (e) {
