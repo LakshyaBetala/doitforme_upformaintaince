@@ -4,6 +4,12 @@ import LandingPage from "@/components/home/LandingPage";
 export const metadata: Metadata = {
   title: "DoItForMe | India's #1 Verified Student Gig Marketplace",
   description: "Connect with ambitious university students for freelance gigs, errands, and micro-internships. Secure Escrow payments and instant UPI withdrawals.",
+  // --- ADD THIS SECTION ---
+  icons: {
+    icon: "/logo.png", // Path to your logo in public folder
+    apple: "/logo.png",
+  },
+  // -----------------------
   keywords: [
     "Student Freelance India", 
     "Hire Students", 
