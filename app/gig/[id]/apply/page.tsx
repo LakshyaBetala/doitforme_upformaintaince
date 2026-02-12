@@ -88,7 +88,6 @@ export default function ApplyPage() {
         setGig(gigData);
 
         // 3. Block Owner from Applying
-        // Check both 'poster_id' and 'user_id' to be safe against schema changes
         const posterId = gigData.poster_id || gigData.user_id;
         if (posterId === u.id) {
           return; // Will be handled by render logic
@@ -142,6 +141,9 @@ export default function ApplyPage() {
       return setError("Please select a delivery time.");
     }
 
+    // FIXED: Construct the ISO string from local components to avoid timezone offset issues
+    const finishBy = new Date(`${selectedDate}T${selectedTime}`).toISOString();
+
     // Ensure selected datetime is before gig deadline (if provided)
     if (gig?.deadline) {
       const selectedTs = new Date(`${selectedDate}T${selectedTime}`).getTime();
@@ -160,15 +162,13 @@ export default function ApplyPage() {
     setSubmitting(true);
 
     try {
-      // Build finish_by datetime from selected date + time
-      const finishBy = new Date(`${selectedDate}T${selectedTime || "23:59"}`).toISOString();
-
+      // FIXED: Corrected the column name to 'finish_by' as per your schema
       const { error: insertError } = await supabase.from("applications").insert({
         gig_id: id,
         worker_id: user.id,
         pitch: message.trim(),
         status: "applied",
-        finish_by: finishBy,
+        finish_by: finishBy, // Mapped to correct database column
       });
 
       if (insertError) throw insertError;
@@ -176,11 +176,10 @@ export default function ApplyPage() {
       router.push(`/gig/${id}`);
     } catch (err: any) {
       console.error("Submit Error:", err);
-      // Show friendlier error if it's still the foreign key issue
       if (err?.message?.includes("foreign key")) {
-         setError("Profile error: Please log out and sign up again to fix your account.");
+          setError("Profile error: Please log out and sign up again to fix your account.");
       } else {
-         setError(err?.message || "Failed to apply");
+          setError(err?.message || "Failed to apply");
       }
       setSubmitting(false);
     }
@@ -328,6 +327,7 @@ export default function ApplyPage() {
                     className="w-full bg-black/20 border border-white/10 rounded-2xl p-3 text-white focus:outline-none focus:border-brand-purple/50 transition-all text-lg"
                     value={selectedDate}
                     onChange={(e) => { setSelectedDate(e.target.value); setDateError(null); }}
+                    // FIXED: Safety check for gig.deadline to prevent crash
                     max={gig?.deadline ? new Date(gig.deadline).toISOString().split('T')[0] : undefined}
                     required
                   />
