@@ -3,21 +3,16 @@
 @tailwind utilities;
 
 /* ---------------------------------------
-   GLOBAL THEME — SWISS MINIMALIST (DARK)
+    GLOBAL THEME — SWISS MINIMALIST (DARK)
 --------------------------------------- */
 
 :root {
-  /* Minimalist Palette (Zinc & Deep Black) */
   --background: #050505; 
   --foreground: #fafafa;
-  
   --card: #0a0a0a;
-  --card-border: #27272a; /* Zinc-800 */
-  
-  /* Brand Accents (Used sparingly for focus) */
+  --card-border: #27272a;
   --brand-purple: #8825F5;
   --brand-blue: #0097FF;
-  
   --glass-bg: rgba(5, 5, 5, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
 }
@@ -26,14 +21,24 @@ html, body {
   background: var(--background);
   color: var(--foreground);
   scroll-behavior: smooth;
-  /* Inter is preferred for Swiss style, falling back to system */
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  
+  /* --- MOBILE OPTIMIZATION 1: OVERFLOW CONTROL --- */
   overflow-x: hidden;
+  width: 100%;
+  position: relative;
+  
+  /* --- MOBILE OPTIMIZATION 2: iOS FILL FIX --- */
+  min-height: -webkit-fill-available;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* --- MOBILE OPTIMIZATION 3: TOUCH UX --- */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* --- FIX: STOP AUTOFILL COLOR CHANGE --- */
-/* This forces the background to stay dark (#0B0B11 matches your input bg) even when browser autofills */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
@@ -44,11 +49,9 @@ input:-webkit-autofill:active{
 }
 
 /* ---------------------------------------
-   CUSTOM CURSOR LOGIC (PRESERVED)
+    CUSTOM CURSOR (ONLY APPLIED TO DESKTOP)
 --------------------------------------- */
-
 @media (min-width: 1024px) {
-  /* Retaining specific class targeting for the Sloth Cursor */
   .use-sloth-cursor,
   .use-sloth-cursor a,
   .use-sloth-cursor button,
@@ -61,50 +64,47 @@ input:-webkit-autofill:active{
 }
 
 /* ---------------------------------------
-   SELECTION
+    MOBILE OPTIMIZATION 4: SCROLLBARS
 --------------------------------------- */
-::selection {
-  background: var(--brand-purple);
-  color: white;
+/* Hide scrollbars on mobile for a cleaner look while keeping functionality */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3f3f46;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #52525b;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--background);
+  }
 }
 
 /* ---------------------------------------
-   SCROLLBAR (REFINED)
+    ANIMATIONS (STAY THE SAME)
 --------------------------------------- */
-::-webkit-scrollbar {
-  width: 6px; /* Thinner */
-}
-::-webkit-scrollbar-thumb {
-  background: #3f3f46; /* Zinc-700 (Matte) */
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #52525b; /* Zinc-600 */
-}
-::-webkit-scrollbar-track {
-  background: var(--background);
-}
-
-/* ---------------------------------------
-   ANIMATIONS
---------------------------------------- */
-
-/* 1. Float (Keep for Sloth) */
 @keyframes float {
-  0%   { transform: translateY(0); }
-  50%  { transform: translateY(-12px); } /* Slightly subtler float */
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
   100% { transform: translateY(0); }
 }
 
-/* 2. Blob (Retained for specific areas, but not global background) */
 @keyframes blob {
-  0%   { transform: translate(0px, 0px) scale(1); }
-  33%  { transform: translate(30px, -50px) scale(1.1); }
-  66%  { transform: translate(-20px, 20px) scale(0.9); }
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
   100% { transform: translate(0px, 0px) scale(1); }
 }
 
-/* 3. Marquee (Keep for Ticker) */
 @keyframes marquee {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
@@ -112,50 +112,47 @@ input:-webkit-autofill:active{
 
 .animate-float { animation: float 6s ease-in-out infinite; }
 .animate-blob { animation: blob 12s ease-in-out infinite; }
-.animate-marquee { animation: marquee 30s linear infinite; } /* Slower for elegance */
-
-.animation-delay-2000 { animation-delay: 2s; }
-.animation-delay-4000 { animation-delay: 4s; }
+.animate-marquee { animation: marquee 30s linear infinite; }
 
 /* ---------------------------------------
-   NOISE TEXTURE (SUBTLE)
+    NOISE TEXTURE (PERFORMANCE OPTIMIZED)
 --------------------------------------- */
-
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  /* Refined noise filter */
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
   z-index: -1;
   opacity: 0.4;
   mix-blend-mode: overlay;
+  will-change: transform;
 }
 
 /* ---------------------------------------
-   UTILITIES (MINIMALIST)
+    UTILITIES (RESPONSIVE FOCUS)
 --------------------------------------- */
 
-/* Glass Panel (Cleaner, less blur, sharp border) */
 .glass {
   background: var(--glass-bg);
   backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px); /* Critical for Safari */
   border: 1px solid var(--glass-border);
 }
 
-/* Bento Card Style */
 .bento-card {
   background: var(--card);
   border: 1px solid var(--card-border);
   transition: border-color 0.3s ease, transform 0.3s ease;
-}
-.bento-card:hover {
-  border-color: #52525b; /* Zinc-600 */
+  margin-bottom: 1rem;
 }
 
-/* Replaces 'neon-text' with a subtle gradient text utility */
+@media (max-width: 640px) {
+  .bento-card {
+    border-radius: 1.5rem;
+  }
+}
+
 .text-gradient {
   background: linear-gradient(to right, #fff, #a1a1aa);
   -webkit-background-clip: text;

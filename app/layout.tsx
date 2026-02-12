@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next"; // Added Viewport
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,12 +6,10 @@ export const metadata: Metadata = {
   description:
     "India’s first Gen-Z student marketplace. Outsource tasks. Earn from free time.",
   
-  // --- FIX 1: Explicit Icon Definitions ---
-  // This forces devices to use YOUR logo instead of the default favicon.ico
   icons: {
-    icon: "/logo.png",       // General favicon
-    shortcut: "/logo.png",   // Shortcut icon
-    apple: "/logo.png",      // Apple/iOS home screen icon
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
   },
   
   openGraph: {
@@ -21,6 +19,20 @@ export const metadata: Metadata = {
     type: "website",
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.doitforme.in'),
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+  },
+};
+
+// --- MOBILE OPTIMIZATION: Viewport Configuration ---
+// Prevents iOS Safari from zooming in on input focus and fixes height issues
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#0B0B11",
 };
 
 export default function RootLayout({
@@ -28,8 +40,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // --- FIX 2: Google Search "Organization" Schema ---
-  // This tells Google: "Hey, this image is THE logo for this brand."
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -43,17 +53,16 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en">
-      <body className="bg-[#0B0B11] text-white antialiased relative overflow-x-hidden selection:bg-[#8825F5] selection:text-white">
+    <html lang="en" className="selection:bg-[#8825F5] selection:text-white">
+      <body className="bg-[#0B0B11] text-white antialiased relative overflow-x-hidden min-h-screen flex flex-col">
         
-        {/* Inject JSON-LD for Google Search */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
 
-        {/* Global Background Texture */}
-        <div className="pointer-events-none fixed inset-0 z-0 opacity-[0.03] mix-blend-overlay">
+        {/* Global Background Texture - Optimized with will-change for mobile GPU */}
+        <div className="pointer-events-none fixed inset-0 z-0 opacity-[0.03] mix-blend-overlay will-change-transform">
            <svg className="h-full w-full">
              <filter id="noise">
                <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch" />
@@ -62,7 +71,8 @@ export default function RootLayout({
            </svg>
         </div>
 
-        <main className="relative z-10 min-h-screen flex flex-col">
+        {/* Main container with iOS-safe padding */}
+        <main className="relative z-10 flex-1 flex flex-col w-full">
           {children}
         </main>
 
