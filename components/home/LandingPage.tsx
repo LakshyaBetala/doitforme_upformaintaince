@@ -8,17 +8,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowRight, CheckCircle2, ShieldCheck, Zap, Lock, 
   DollarSign, ChevronDown, Quote, Star, Wallet, Code2, PenTool, Bike, Users, Mail, Clock,
-  Linkedin, Instagram // Added Social Icons
+  Linkedin, Instagram 
 } from "lucide-react";
 
 // -------------------------------------------------------
-// 1. "VOGUE" PRELOADER (Purple Text, 0.95s Reveal)
+// 1. "VOGUE" PRELOADER (Updated with Asset Awareness)
 // -------------------------------------------------------
 const words = ["HUSTLE", "EARN", "BUILD", "SCALE", "RELAX"];
 
-const Preloader = ({ onComplete }: { onComplete: () => void }) => {
+const Preloader = ({ 
+  onComplete, 
+  isAssetReady 
+}: { 
+  onComplete: () => void, 
+  isAssetReady: boolean 
+}) => {
   const [index, setIndex] = useState(0);
   const [showLogo, setShowLogo] = useState(false);
+  const [wordsFinished, setWordsFinished] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -26,20 +33,27 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
         if (prev === words.length - 1) {
           clearInterval(interval);
           setShowLogo(true);
-          setTimeout(onComplete, 1200); 
+          setWordsFinished(true); // Signal that cycling is done
           return prev;
         }
         return prev + 1;
       });
     }, 200);
-
     return () => clearInterval(interval);
-  }, [onComplete]);
+  }, []);
+
+  // Final trigger: Only exit when words are done AND assets are ready
+  useEffect(() => {
+    if (wordsFinished && isAssetReady) {
+      const timer = setTimeout(onComplete, 1000); // Brief pause on logo
+      return () => clearTimeout(timer);
+    }
+  }, [wordsFinished, isAssetReady, onComplete]);
 
   return (
     <motion.div 
       initial={{ y: 0 }}
-      exit={{ y: "-100%", transition: { duration: 0.95, ease: [0.76, 0, 0.24, 1] } }} // 0.95s Duration
+      exit={{ y: "-100%", transition: { duration: 0.95, ease: [0.76, 0, 0.24, 1] } }}
       className="fixed inset-0 z-[9999] bg-[#020202] flex items-center justify-center overflow-hidden cursor-wait"
     >
       <AnimatePresence mode="wait">
@@ -50,7 +64,6 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
             animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, scale: 0.9, filter: "blur(5px)" }}
             transition={{ duration: 0.15 }}
-            // FORCED STYLE TO ENSURE PURPLE COLOR WORKS
             style={{ color: '#8825F5' }} 
             className="text-6xl md:text-9xl font-black tracking-tighter"
           >
@@ -63,8 +76,7 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
             transition={{ duration: 0.6, ease: "circOut" }}
             className="relative flex flex-col items-center"
           >
-             {/* WHITE LOGO */}
-             <h1 className="text-5xl md:text-8xl font-black text-white tracking-tighter mix-blend-normal">
+             <h1 className="text-5xl md:text-8xl font-black text-white tracking-tighter">
                DoItForMe.
              </h1>
              <motion.div 
@@ -73,6 +85,12 @@ const Preloader = ({ onComplete }: { onComplete: () => void }) => {
                transition={{ duration: 0.8, delay: 0.1 }}
                className="h-1 bg-gradient-to-r from-brand-purple to-brand-blue mt-4 w-full shadow-[0_0_30px_rgba(136,37,245,0.8)]"
              />
+             {/* Subtle indicator if assets are still fetching */}
+             {!isAssetReady && (
+               <p className="mt-4 text-[10px] text-zinc-600 uppercase tracking-widest animate-pulse">
+                 Loading Assets...
+               </p>
+             )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -89,13 +107,12 @@ const gigsMock = [
   { id: 3, user: "Rohan M.", role: "Errand", title: "Drop Lab Record to Block 4", price: "₹150", icon: Bike, color: "bg-emerald-500" }
 ];
 
-// UPDATED: Using direct hex codes for style prop
 const testimonials = [
-  { role: "Poster", quote: "Got my assignment printed and delivered in 2 hours!", color: "#8825F5" }, // Purple
-  { role: "Worker", quote: "I made ₹2000 last weekend just helping with Figma designs.", color: "#3B82F6" }, // Blue
-  { role: "Student", quote: "The direct payment flow is so much better than other apps.", color: "#EC4899" }, // Pink
-  { role: "Dev", quote: "Found someone to debug my code instantly.", color: "#10B981" }, // Emerald
-  { role: "Artist", quote: "Sold 3 custom sketches for a festival through this.", color: "#EAB308" } // Yellow
+  { role: "Poster", quote: "Got my assignment printed and delivered in 2 hours!", color: "#8825F5" }, 
+  { role: "Worker", quote: "I made ₹2000 last weekend just helping with Figma designs.", color: "#3B82F6" }, 
+  { role: "Student", quote: "The direct payment flow is so much better than other apps.", color: "#EC4899" }, 
+  { role: "Dev", quote: "Found someone to debug my code instantly.", color: "#10B981" }, 
+  { role: "Artist", quote: "Sold 3 custom sketches for a festival through this.", color: "#EAB308" } 
 ];
 
 const useScrollPosition = () => {
@@ -122,6 +139,48 @@ export default function LandingPage() {
   const [isSlothLoading, setIsSlothLoading] = useState(false);
   const [clickPos, setClickPos] = useState({ x: 0, y: 0 });
   const [activeGigIndex, setActiveGigIndex] = useState(0);
+
+  // --- NEW: Preloader and Cooldown Logic ---
+  const [isAssetReady, setIsAssetReady] = useState(false);
+  const [shouldShowPreloader, setShouldShowPreloader] = useState(true);
+
+  // 1. Session & Cooldown Check (5 mins)
+  useEffect(() => {
+    const LAST_PRELOAD_TIME = "dfm_last_preload";
+    const ONE_HOUR = 2 * 60 * 1000;
+    
+    const lastSeen = localStorage.getItem(LAST_PRELOAD_TIME);
+    const now = Date.now();
+
+    if (lastSeen && (now - parseInt(lastSeen)) < ONE_HOUR) {
+      setShouldShowPreloader(false);
+      setLoadingComplete(true);
+      setIsAssetReady(true);
+    } else {
+      localStorage.setItem(LAST_PRELOAD_TIME, now.toString());
+    }
+  }, []);
+
+  // 2. Asset Preloading (Logo and Sloth)
+  useEffect(() => {
+    const criticalImages = ["/logo.svg", "/sloth.png"];
+    let loaded = 0;
+
+    criticalImages.forEach((src) => {
+      const img = new window.Image();
+      img.src = src;
+      img.onload = () => {
+        loaded++;
+        if (loaded === criticalImages.length) {
+          setIsAssetReady(true);
+        }
+      };
+      img.onerror = () => {
+        loaded++;
+        if (loaded === criticalImages.length) setIsAssetReady(true);
+      };
+    });
+  }, []);
 
   const ActiveGigIcon = gigsMock[activeGigIndex].icon;
 
@@ -165,9 +224,14 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#020202] text-white overflow-x-hidden relative selection:bg-brand-purple selection:text-white font-sans touch-manipulation">
       
-      {/* 1. CURTAIN REVEAL */}
+      {/* 1. CURTAIN REVEAL (Updated Logic) */}
       <AnimatePresence>
-        {!loadingComplete && <Preloader onComplete={() => setLoadingComplete(true)} />}
+        {shouldShowPreloader && !loadingComplete && (
+          <Preloader 
+            isAssetReady={isAssetReady}
+            onComplete={() => setLoadingComplete(true)} 
+          />
+        )}
       </AnimatePresence>
 
       {/* 2. SLOTH LOADING */}
@@ -193,14 +257,12 @@ export default function LandingPage() {
 
       {/* --- ATMOSPHERE: LIGHTER BLUE & DEEP PURPLE --- */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-         {/* Lavender Tint */}
          <motion.div 
            animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.15, 0.1] }}
            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
            className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vw] bg-[#8825F5] rounded-full blur-[150px] opacity-10 will-change-transform"
            style={{ transform: 'translateZ(0)' }}
          />
-         {/* LIGHTER Blue Tint (#93C5FD) */}
          <motion.div 
            animate={{ scale: [1, 1.25, 1], opacity: [0.08, 0.12, 0.08] }}
            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
@@ -555,7 +617,6 @@ export default function LandingPage() {
       <footer className="w-full bg-[#020202] py-12 border-t border-white/5 relative z-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
           
-          {/* Logo & Copyright */}
           <div className="text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
               <div className="relative w-6 h-6 grayscale opacity-50"><Image src="/logo.svg" alt="logo" fill className="object-contain" /></div>
@@ -564,7 +625,6 @@ export default function LandingPage() {
             <p className="text-[10px] md:text-xs text-zinc-600">© 2026 DoItForMe Inc.</p>
           </div>
 
-          {/* Links & Socials */}
           <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
              <div className="flex gap-6 text-xs md:text-sm text-zinc-500">
                <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
@@ -572,10 +632,8 @@ export default function LandingPage() {
                <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
              </div>
              
-             {/* Divider (Desktop only) */}
              <div className="hidden md:block h-4 w-px bg-white/10"></div>
 
-             {/* Social Icons */}
              <div className="flex gap-4">
                <a 
                  href="https://www.linkedin.com/company/doitforme1/" 
