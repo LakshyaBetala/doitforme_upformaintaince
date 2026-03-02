@@ -28,6 +28,11 @@ export async function POST(req: Request) {
 
     if (gigError || !gig) return NextResponse.json({ error: "Gig not found" }, { status: 404 });
 
+    // === ADD THIS SECURITY CHECK ===
+    if (gig.poster_id !== user.id) {
+        return NextResponse.json({ error: "Forbidden: You do not own this gig." }, { status: 403 });
+    }
+
     // 3. FETCH ACTUAL USER DETAILS (Phone and Email) from the users table
     const { data: dbUser, error: userError } = await supabase
       .from("users")
