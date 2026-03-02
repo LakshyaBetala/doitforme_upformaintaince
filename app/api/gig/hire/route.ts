@@ -34,14 +34,20 @@ export async function POST(req: Request) {
     }
 
     // 2. SECURITY: Fetch Real Price from DB
+   // 2. SECURITY: Fetch Real Price from DB
     const { data: gig, error: gigError } = await supabase
       .from("gigs")
-      .select("price, title")
+      .select("price, title, poster_id") // ADD poster_id
       .eq("id", gigId)
       .single();
 
     if (gigError || !gig) {
         return NextResponse.json({ error: "Gig not found or invalid" }, { status: 404 });
+    }
+
+    // === ADD THIS SECURITY CHECK ===
+    if (gig.poster_id !== user.id) {
+        return NextResponse.json({ error: "Forbidden: You do not own this gig." }, { status: 403 });
     }
 
     // 3. Calculate Total Amount (Including 2% Gateway Fee)
