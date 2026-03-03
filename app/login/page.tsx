@@ -100,26 +100,18 @@ export default function AuthPage() {
   };
 
   const handleLogin = async () => {
-    const { data: userExists } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .single();
-
-    if (!userExists) {
-      setLoading(false);
-      setMessage("Account not found. Please Sign Up below.");
-      return; 
-    }
-
     let error = null;
+
+    // We removed the manual 'userExists' database query. 
+    // We let Supabase Auth do the heavy lifting securely.
 
     if (loginMethod === "OTP") {
       const res = await supabase.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: false },
+        options: { shouldCreateUser: false }, // This tells Supabase to fail if user doesn't exist
       });
       error = res.error;
+      
       if (!error) {
         setLoading(false);
         return router.push(`/verify?email=${encodeURIComponent(email)}&mode=login`);
@@ -131,17 +123,26 @@ export default function AuthPage() {
       });
       error = res.error;
       
-      if (!error) {
-        await syncUser(res.data.user?.id!, email);
+      if (!error && res.data.user) {
+        // Sync user data using the secure API route
+        await syncUser(res.data.user.id, email);
         router.push("/dashboard");
         return;
       }
     }
 
     setLoading(false);
-    if (error) setMessage(error.message);
+    
+    // Map Supabase errors to user-friendly messages
+    if (error) {
+      if (error.message.includes("Invalid login credentials") || error.message.includes("Signups not allowed for otp")) {
+        setMessage("Account not found or incorrect password. Please Sign Up below.");
+      } else {
+        setMessage(error.message);
+      }
+    }
   };
-
+  
   const handleSignup = async () => {
     const finalCollege = college === "Other" ? customCollege.trim() : college;
 
