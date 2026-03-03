@@ -181,10 +181,8 @@ export default function AuthPage() {
     }
 
     if (data.user) {
-      await supabase.auth.signInWithOtp({
-        email,
-        options: { shouldCreateUser: false },
-      });
+      // REMOVED the signInWithOtp call from here.
+      // signUp() already sends the confirmation email automatically.
       setLoading(false);
       router.push(`/verify?email=${encodeURIComponent(email)}&mode=signup`);
     }
