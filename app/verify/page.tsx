@@ -164,10 +164,23 @@ function VerifyContent() {
     setError("");
     setLoading(true);
 
-    const { error: resendError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false },
-    });
+    let resendError = null;
+
+    if (mode === "signup") {
+      // 1. Correct way to resend a SIGNUP OTP
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
+      resendError = error;
+    } else {
+      // 2. Correct way to resend a LOGIN OTP
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
+      });
+      resendError = error;
+    }
 
     setLoading(false);
 
